@@ -13,7 +13,7 @@ arguments
     tc (1,1) double {mustBeReal}
     fpeak (1,1) double {mustBePositive}
 end
-
+t = t(:);
 tmp = ((t-tc)*pi*fpeak).^2;
 vals = (1-2*tmp).* exp( -tmp );
 
