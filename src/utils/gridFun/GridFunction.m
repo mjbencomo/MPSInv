@@ -92,7 +92,13 @@ classdef GridFunction < handle
         %%%%%%%%
         function h = plot(obj,varargin)
             if obj.dim == 1
-                h = plot(obj.grid.x.pts, obj.values, varargin{:});
+                if obj.grid.N == 1
+                    h = plot(obj.grid.x.pts,obj.values, ...
+                        'o',varargin{:});
+                else
+                    h = plot(obj.grid.x.pts,obj.values, ...
+                        varargin{:});
+                end
                 xlabel('x');
                 ylabel(obj.formattedLabel());
 

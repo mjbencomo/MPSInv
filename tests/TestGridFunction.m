@@ -228,5 +228,49 @@ classdef TestGridFunction < matlab.unittest.TestCase
                 @() u.setValues("invalid"), ...
                 'GridFunction:InvalidData');
         end
+
+        function onePointGridFunction(testCase)
+            grid = GridSpace1D(Grid1D([0,1],0.35));
+            u = GridFunction(grid);
+
+            testCase.verifyEqual(u.N,1);
+            testCase.verifyEqual(u.values,0);
+
+            u.setValues(2.5);
+            testCase.verifyEqual(u.values,2.5);
+        end
+
+        function onePointGridFunctionFromFunction(testCase)
+            grid = GridSpace1D(Grid1D([0,1],0.35));
+            u = GridFunction(grid);
+
+            u.setValues(@(x) sin(pi*x));
+
+            testCase.verifyEqual( ...
+                u.values,sin(0.35*pi),AbsTol=1e-14);
+        end
+
+        function interpolateOntoOnePointGrid(testCase)
+            sourceGrid = GridSpace1D( ...
+                Grid1DUnifPrimal([0,1],11));
+
+            targetGrid = GridSpace1D( ...
+                Grid1D([0,1],0.35));
+
+            source = GridFunction(sourceGrid);
+            source.setValues(@(x) x.^2);
+
+            target = GridFunction(targetGrid);
+            target.interpolateFrom(source);
+
+            expected = interp1( ...
+                sourceGrid.x.pts, ...
+                source.values, ...
+                0.35, ...
+                'linear');
+
+            testCase.verifyEqual( ...
+                target.values,expected,AbsTol=1e-14);
+        end
     end
 end
