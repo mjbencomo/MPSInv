@@ -89,5 +89,63 @@ classdef TestGridClasses < matlab.unittest.TestCase
                 @() Grid1D([0,1],1.2), ...
                 'Grid1D:PointsOutsideDomain');
         end
+
+        function verticalLineGrid2D(testCase)
+            x = Grid1D([0,1],0.5);
+            y = Grid1DUnifPrimal([0,2],9);
+            g = GridSpace2D(x,y);
+
+            testCase.verifyEqual(g.dim,2);
+            testCase.verifyEqual(g.N,[1,9]);
+            testCase.verifyEqual(g.numPts,9);
+            testCase.verifyEqual(g.singletonDimensions,[true,false]);
+            testCase.verifyTrue(g.isLineGrid);
+            testCase.verifyFalse(g.isPointGrid);
+        end
+
+        function horizontalLineGrid2D(testCase)
+            x = Grid1DUnifPrimal([0,1],5);
+            y = Grid1D([0,2],1.25);
+            g = GridSpace2D(x,y);
+
+            testCase.verifyEqual(g.N,[5,1]);
+            testCase.verifyEqual(g.singletonDimensions,[false,true]);
+            testCase.verifyTrue(g.isLineGrid);
+            testCase.verifyFalse(g.isPointGrid);
+        end
+
+        function pointGrid2D(testCase)
+            x = Grid1D([0,1],0.35);
+            y = Grid1D([0,2],1.25);
+            g = GridSpace2D(x,y);
+
+            [X,Y] = g.mesh();
+
+            testCase.verifyEqual(g.N,[1,1]);
+            testCase.verifyEqual(g.numPts,1);
+            testCase.verifyEqual(X,0.35);
+            testCase.verifyEqual(Y,1.25);
+            testCase.verifyFalse(g.isLineGrid);
+            testCase.verifyTrue(g.isPointGrid);
+        end
+
+        function singletonGrid2DSpacingUndefined(testCase)
+            x = Grid1D([0,1],0.5);
+            y = Grid1DUnifPrimal([0,2],9);
+            g = GridSpace2D(x,y);
+
+            testCase.verifyError( ...
+                @() g.h, ...
+                'GridSpace2D:SpacingUndefined');
+        end
+
+        function rejectNonuniformCoordinateInGrid2D(testCase)
+            x = Grid1D([0,1],[0,0.2,0.7,1]);
+            y = Grid1DUnifPrimal([0,2],9);
+
+            testCase.verifyError( ...
+                @() GridSpace2D(x,y), ...
+                'GridSpace2D:UnsupportedGrid');
+        end
     end
 end
