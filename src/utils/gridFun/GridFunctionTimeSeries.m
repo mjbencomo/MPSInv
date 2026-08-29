@@ -162,6 +162,7 @@ classdef GridFunctionTimeSeries < handle
                 options.FramePause (1,1) double ...
                     {mustBeNonnegative,mustBeFinite} = 0.05
                 options.Parent = []
+                options.relLimFactor (1,1) double {mustBePositive} = 1
             end
 
             % Extracting figure axis
@@ -174,6 +175,12 @@ classdef GridFunctionTimeSeries < handle
                     'Parent must be a valid axes object.');
             end
 
+            % Locating cmap file
+            projectRoot = currentProject().RootFolder;
+            matFile = fullfile(projectRoot, "src", "utils", ...
+                "gridFun", "cmap_BWR.mat");
+            data = load(matFile);
+
             if obj.dim == 1
                 if obj.grid.N == 1
                     h = plot(ax,obj.grid.x.pts,obj.values(:,1),'o');
@@ -182,7 +189,9 @@ classdef GridFunctionTimeSeries < handle
                 end
                 xlabel(ax,'x');
                 ylabel(ax,obj.formattedLabel());
-                ylim(ax,obj.expandedLimits(obj.values));
+
+                limits = obj.expandedLimits(obj.values)*options.relLimFactor;
+                ylim(ax,limits);
 
             elseif obj.dim == 2
                 h = imagesc(ax, ...
@@ -192,10 +201,13 @@ classdef GridFunctionTimeSeries < handle
                 axis(ax,'xy');
                 xlabel(ax,'x');
                 ylabel(ax,'y');
+
                 cb = colorbar(ax);
                 colormap(ax,data.cmap)
                 cb.Label.String = obj.formattedLabel();
-                clim(ax,obj.expandedLimits(obj.values));
+
+                limits = obj.expandedLimits(obj.values)*options.relLimFactor;
+                clim(ax,limits);
 
             else
                 error('GridFunctionTimeSeries:InvalidDimension', ...
@@ -221,7 +233,16 @@ classdef GridFunctionTimeSeries < handle
 
         %%%%%%%%
         function h = plotTimeSeries(obj,options)
-
+            % Plot the stored grid function over its output times and
+            % receiver indexes.
+            %
+            %   h = U.plotTimeSeries()
+            %   h = U.plotTimeSeries(Parent=ax)
+            %
+            % If output grid consist of a single point then data is plotted
+            % using plot.
+            % If output grid consists of more than one point then it is
+            % plotted using imagesc.
             arguments
                 obj 
                 options.Parent = [] 
@@ -237,12 +258,12 @@ classdef GridFunctionTimeSeries < handle
                     'Parent must be a valid axes object.');
             end
 
+            % Locating cmap file
             projectRoot = currentProject().RootFolder;
             matFile = fullfile(projectRoot, "src", "utils", ...
                 "gridFun", "cmap_BWR.mat");
             data = load(matFile);
       
-
             if obj.dim == 1
                 if obj.N == 1
                     h = plot(ax,obj.times,obj.values(1,:));
@@ -340,7 +361,13 @@ classdef GridFunctionTimeSeries < handle
             if lowerLimit == upperLimit
                 padding = 0.05*max(1,abs(lowerLimit));
                 limits = [lowerLimit-padding,upperLimit+padding];
-            else
+            else 
+                if lowerLimit*upperLimit<0
+                    % Centering at 0 if limits are of opposite sign
+                    lowerLimit = -max(abs(lowerLimit),upperLimit);
+                    upperLimit = max(abs(lowerLimit),upperLimit);
+                end
+
                 limits = [lowerLimit,upperLimit];
             end
         end
