@@ -193,6 +193,7 @@ classdef GridFunctionTimeSeries < handle
                 xlabel(ax,'x');
                 ylabel(ax,'y');
                 cb = colorbar(ax);
+                colormap(ax,data.cmap)
                 cb.Label.String = obj.formattedLabel();
                 clim(ax,obj.expandedLimits(obj.values));
 
@@ -236,6 +237,12 @@ classdef GridFunctionTimeSeries < handle
                     'Parent must be a valid axes object.');
             end
 
+            projectRoot = currentProject().RootFolder;
+            matFile = fullfile(projectRoot, "src", "utils", ...
+                "gridFun", "cmap_BWR.mat");
+            data = load(matFile);
+      
+
             if obj.dim == 1
                 if obj.N == 1
                     h = plot(ax,obj.times,obj.values(1,:));
@@ -249,6 +256,7 @@ classdef GridFunctionTimeSeries < handle
                     xlabel(ax,"Receiver Index");
                     ylabel(ax,obj.timeLabel+" ("+obj.timeUnits+")");
                     cb = colorbar(ax);
+                    colormap(ax,data.cmap)
                     cb.Label.String = obj.formattedLabel();
                     clim(ax,obj.expandedLimits(obj.values));
                 end
@@ -267,6 +275,7 @@ classdef GridFunctionTimeSeries < handle
                    xlabel(ax,"Receiver Index");
                    ylabel(ax,obj.timeLabel+" ("+obj.timeUnits+")");
                    cb = colorbar(ax);
+                   colormap(ax,data.cmap)
                    cb.Label.String = obj.formattedLabel();
                    clim(ax,obj.expandedLimits(obj.values));
                 end
