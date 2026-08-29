@@ -151,7 +151,7 @@ classdef GridFunctionTimeSeries < handle
             % Animate the stored grid function over its output times.
             %
             %   h = U.animate()
-            %   h = U.animate(FramePause=0.05,Parent=ax)
+            %   h = U.animate(FramePause=0.05,Parent=ax,relLimFactor=0.5)
             %
             % A 1D series is displayed with plot, while a 2D series is
             % displayed with imagesc. The same graphics object is updated
@@ -162,6 +162,7 @@ classdef GridFunctionTimeSeries < handle
                 options.FramePause (1,1) double ...
                     {mustBeNonnegative,mustBeFinite} = 0.05
                 options.Parent = []
+                options.relLimFactor (1,1) double {mustBePositive} = 1
             end
 
             % Extracting figure axis
@@ -174,6 +175,12 @@ classdef GridFunctionTimeSeries < handle
                     'Parent must be a valid axes object.');
             end
 
+            % Locating cmap file
+            projectRoot = currentProject().RootFolder;
+            matFile = fullfile(projectRoot, "src", "utils", ...
+                "gridFun", "cmap_BWR.mat");
+            data = load(matFile);
+
             if obj.dim == 1
                 if obj.grid.N == 1
                     h = plot(ax,obj.grid.x.pts,obj.values(:,1),'o');
@@ -182,7 +189,9 @@ classdef GridFunctionTimeSeries < handle
                 end
                 xlabel(ax,'x');
                 ylabel(ax,obj.formattedLabel());
-                ylim(ax,obj.expandedLimits(obj.values));
+
+                limits = obj.expandedLimits(obj.values)*options.relLimFactor;
+                ylim(ax,limits);
 
             elseif obj.dim == 2
                 h = imagesc(ax, ...
@@ -192,9 +201,13 @@ classdef GridFunctionTimeSeries < handle
                 axis(ax,'xy');
                 xlabel(ax,'x');
                 ylabel(ax,'y');
+
                 cb = colorbar(ax);
+                colormap(ax,data.cmap)
                 cb.Label.String = obj.formattedLabel();
-                clim(ax,obj.expandedLimits(obj.values));
+
+                limits = obj.expandedLimits(obj.values)*options.relLimFactor;
+                clim(ax,limits);
 
             else
                 error('GridFunctionTimeSeries:InvalidDimension', ...
@@ -216,6 +229,218 @@ classdef GridFunctionTimeSeries < handle
                     pause(options.FramePause);
                 end
             end
+        end
+
+        %%%%%%%%
+        function h = animateMedBack(obj,medium,options)
+            % Animate the stored grid function over its output times, with
+            % the wave-speed in the background.
+            %
+            %   h = U.animateMedBack()
+            %   h = U.animateMedBack
+            %
+            % A 1D series is displayed with plot, while a 2D series is
+            % displayed with imagesc. The same graphics object is updated
+            % for every frame. Limits are fixed using the complete data set.
+
+            arguments
+                obj
+                medium
+                options.FramePause (1,1) double ...
+                    {mustBeNonnegative,mustBeFinite} = 0.05
+                options.Parent = []
+                options.relLimFactor (1,1) double ...
+                    {mustBePositive} = 1
+                options.NumContours (1,1) double ...
+                    {mustBeInteger,mustBePositive} = 12
+            end
+
+            % Create or validate figure axis
+            if isempty(options.Parent)
+                ax = axes(figure);
+            elseif isgraphics(options.Parent,'axes')
+                ax = options.Parent;
+            else
+                error('GridFunctionTimeSeries:InvalidParent', ...
+                    'Parent must be a valid axes object.');
+            end
+
+
+            % Locating cmap file
+            projectRoot = currentProject().RootFolder;
+            matFile = fullfile(projectRoot, "src", "utils", ...
+                "gridFun", "cmap_BWR.mat");
+            data = load(matFile);
+
+            if obj.dim == 1
+                % Case in 1D ---------------------------------------------%
+               
+                % Validating medium
+                if isa(medium,"AcousticMedium1D")
+                    [~,~,wspeed,~] = sampleMedium1D(obj.grid,medium);
+                else
+                    error("GridFunctionTimeSeries:InvalidMedium",...
+                        "In 1D, medium must be a valid AcousticMedium1D object.");
+                end
+               
+                % Plotting wave-speed using right y-axis
+                yyaxis(ax,"right");
+                h.medium = plot(ax, ...
+                    obj.grid.x.pts, ...
+                    wspeed.values(:),":r");
+                ylabel(ax,medium.waveSpeedLabel+" ("+medium.waveSpeedUnits+")");
+                ax.YAxis(2).Color = h.medium.Color;
+
+                % Plotting solution 
+                yyaxis(ax,"left");
+                if obj.grid.N == 1
+                    h.solution = plot(ax, ...
+                        obj.grid.x.pts, ...
+                        obj.values(:,1),'o');
+                else
+                    h.solution = plot(ax, ...
+                        obj.grid.x.pts, ...
+                        obj.values(:,1) );
+                end
+                xlabel(ax,'x');
+                ylabel(ax,obj.formattedLabel());
+
+                limits = obj.expandedLimits(obj.values)*options.relLimFactor;
+                ylim(ax,limits);
+                ax.YAxis(1).Color = h.solution.Color;
+
+            elseif obj.dim == 2
+                % 2D case ------------------------------------------------%
+
+                % Validating medium
+                if isa(medium,"AcousticMedium2D")
+                    [kappa,~,~,~,~] = sampleMedium2D(obj.grid,medium);
+                else
+                    error("GridFunctionTimeSeries:InvalidMedium",...
+                        "In 2D, medium must be a valid AcousticMedium2D object.");
+                end
+
+                % Plotting solution
+                h.solution = imagesc(ax, ...
+                    obj.grid.x.pts, ...
+                    obj.grid.y.pts, ...
+                    obj.values(:,:,1).');
+                axis(ax,'xy');
+                xlabel(ax,'x');
+                ylabel(ax,'y');
+
+                cb = colorbar(ax);
+                colormap(ax,data.cmap)
+                cb.Label.String = obj.formattedLabel();
+
+                limits = obj.expandedLimits(obj.values)*options.relLimFactor;
+                clim(ax,limits);
+                hold(ax,"on")
+
+                % Plotting wave-speed as contour lines
+                [x_mesh,y_mesh] = obj.grid.mesh;
+                [~,h.medium] = contour(ax,x_mesh,y_mesh, ...
+                    kappa.values, ...
+                    options.NumContours, ...
+                    "k", "LineWidth",0.75);
+
+                % Keep contours in top of image
+                uistack(h.medium,"top");
+                hold(ax,"off")
+
+
+            else
+                error('GridFunctionTimeSeries:InvalidDimension', ...
+                    'Animation is only supported for 1D and 2D grids.');
+            end
+
+            % Time-loop for animation
+            for timeIndex = 1:obj.Nt
+                if obj.dim == 1
+                    h.solution.YData = obj.values(:,timeIndex);
+                else
+                    h.solution.CData = obj.values(:,:,timeIndex).';
+                end
+
+                title(ax,obj.formattedTime(timeIndex));
+                drawnow;
+
+                if options.FramePause > 0 && timeIndex < obj.Nt
+                    pause(options.FramePause);
+                end
+            end
+        end
+
+        %%%%%%%%
+        function h = plotTimeSeries(obj,options)
+            % Plot the stored grid function over its output times and
+            % receiver indexes.
+            %
+            %   h = U.plotTimeSeries()
+            %   h = U.plotTimeSeries(Parent=ax)
+            %
+            % If output grid consist of a single point then data is plotted
+            % using plot.
+            % If output grid consists of more than one point then it is
+            % plotted using imagesc.
+            arguments
+                obj 
+                options.Parent = [] 
+            end
+        
+            % Extracting figure axis
+            if isempty(options.Parent)
+                ax = axes(figure);
+            elseif isgraphics(options.Parent,'axes')
+                ax = options.Parent;
+            else
+                error('GridFunctionTimeSeries:InvalidParent', ...
+                    'Parent must be a valid axes object.');
+            end
+
+            % Locating cmap file
+            projectRoot = currentProject().RootFolder;
+            matFile = fullfile(projectRoot, "src", "utils", ...
+                "gridFun", "cmap_BWR.mat");
+            data = load(matFile);
+      
+            if obj.dim == 1
+                if obj.N == 1
+                    h = plot(ax,obj.times,obj.values(1,:));
+                    xlabel(ax,obj.timeLabel+" ("+obj.timeUnits+")");
+                    ylabel(obj.formattedLabel());
+                else
+                    h = imagesc(ax, ...
+                        1:obj.N, ...
+                        obj.times, ...
+                        obj.values.');
+                    xlabel(ax,"Receiver Index");
+                    ylabel(ax,obj.timeLabel+" ("+obj.timeUnits+")");
+                    cb = colorbar(ax);
+                    colormap(ax,data.cmap)
+                    cb.Label.String = obj.formattedLabel();
+                    clim(ax,obj.expandedLimits(obj.values));
+                end
+
+            elseif obj.dim == 2
+                % In 2D receivers are numbered first by x, then by y
+                % coordinate.
+                if obj.N == 1
+                    h = plot(ax,obj.times,obj.values(:));
+                    xlabel(ax,obj.timeLabel+" ("+obj.timeUnits+")");
+                    ylabel(obj.formattedLabel());
+                else 
+                   Nxy = prod(obj.N);
+                   vals = reshape(obj.values,[Nxy,obj.Nt]);
+                   h = imagesc(1:Nxy,obj.times,vals.');
+                   xlabel(ax,"Receiver Index");
+                   ylabel(ax,obj.timeLabel+" ("+obj.timeUnits+")");
+                   cb = colorbar(ax);
+                   colormap(ax,data.cmap)
+                   cb.Label.String = obj.formattedLabel();
+                   clim(ax,obj.expandedLimits(obj.values));
+                end
+            end    
         end
 
         %%%%%%%%
@@ -276,7 +501,13 @@ classdef GridFunctionTimeSeries < handle
             if lowerLimit == upperLimit
                 padding = 0.05*max(1,abs(lowerLimit));
                 limits = [lowerLimit-padding,upperLimit+padding];
-            else
+            else 
+                if lowerLimit*upperLimit<0
+                    % Centering at 0 if limits are of opposite sign
+                    lowerLimit = -max(abs(lowerLimit),upperLimit);
+                    upperLimit = max(abs(lowerLimit),upperLimit);
+                end
+
                 limits = [lowerLimit,upperLimit];
             end
         end
