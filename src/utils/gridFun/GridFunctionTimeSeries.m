@@ -219,6 +219,47 @@ classdef GridFunctionTimeSeries < handle
         end
 
         %%%%%%%%
+        function h = plotTimeSeries(obj,options)
+
+            arguments
+                obj 
+                options.Parent = [] 
+            end
+        
+            % Extracting figure axis
+            if isempty(options.Parent)
+                ax = axes(figure);
+            elseif isgraphics(options.Parent,'axes')
+                ax = options.Parent;
+            else
+                error('GridFunctionTimeSeries:InvalidParent', ...
+                    'Parent must be a valid axes object.');
+            end
+
+            if obj.dim == 1
+                if obj.grid.N == 1
+                    h = plot(ax,obj.times,obj.values(1,:));
+                    xlabel(ax,obj.timeLabel+" ("+obj.timeUnits+")");
+                    ylabel(obj.formattedLabel());
+                else
+                    h = imagesc(ax, ...
+                        obj.grid.x.N, ...
+                        obj.times, ...
+                        obj.values.');
+                    xlabel(ax,'Receiver Index');
+                    ylabel(ax,obj.timeLabel+" ("+obj.timeUnits+")");
+                    cb = colorbar(ax);
+                    cb.Label.String = obj.formattedLabel();
+                    clim(ax,obj.expandedLimits(obj.values));
+                end
+
+            elseif obj.dim == 2
+
+            end
+            
+        end
+
+        %%%%%%%%
         function value = formattedLabel(obj)
             % Return the field label with units when units are provided.
 
