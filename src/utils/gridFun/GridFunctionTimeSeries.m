@@ -175,7 +175,11 @@ classdef GridFunctionTimeSeries < handle
             end
 
             if obj.dim == 1
-                h = plot(ax,obj.grid.x.pts,obj.values(:,1));
+                if obj.grid.N == 1
+                    h = plot(ax,obj.grid.x.pts,obj.values(:,1),'o');
+                else
+                    h = plot(ax,obj.grid.x.pts,obj.values(:,1));
+                end
                 xlabel(ax,'x');
                 ylabel(ax,obj.formattedLabel());
                 ylim(ax,obj.expandedLimits(obj.values));
