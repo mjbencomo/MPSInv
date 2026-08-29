@@ -237,16 +237,16 @@ classdef GridFunctionTimeSeries < handle
             end
 
             if obj.dim == 1
-                if obj.grid.N == 1
+                if obj.N == 1
                     h = plot(ax,obj.times,obj.values(1,:));
                     xlabel(ax,obj.timeLabel+" ("+obj.timeUnits+")");
                     ylabel(obj.formattedLabel());
                 else
                     h = imagesc(ax, ...
-                        obj.grid.x.N, ...
+                        1:obj.N, ...
                         obj.times, ...
                         obj.values.');
-                    xlabel(ax,'Receiver Index');
+                    xlabel(ax,"Receiver Index");
                     ylabel(ax,obj.timeLabel+" ("+obj.timeUnits+")");
                     cb = colorbar(ax);
                     cb.Label.String = obj.formattedLabel();
@@ -254,9 +254,23 @@ classdef GridFunctionTimeSeries < handle
                 end
 
             elseif obj.dim == 2
-
-            end
-            
+                % In 2D receivers are numbered first by x, then by y
+                % coordinate.
+                if obj.N == 1
+                    h = plot(ax,obj.times,obj.values(:));
+                    xlabel(ax,obj.timeLabel+" ("+obj.timeUnits+")");
+                    ylabel(obj.formattedLabel());
+                else 
+                   Nxy = prod(obj.N);
+                   vals = reshape(obj.values,[Nxy,obj.Nt]);
+                   h = imagesc(1:Nxy,obj.times,vals.');
+                   xlabel(ax,"Receiver Index");
+                   ylabel(ax,obj.timeLabel+" ("+obj.timeUnits+")");
+                   cb = colorbar(ax);
+                   cb.Label.String = obj.formattedLabel();
+                   clim(ax,obj.expandedLimits(obj.values));
+                end
+            end    
         end
 
         %%%%%%%%
