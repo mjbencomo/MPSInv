@@ -274,13 +274,14 @@ classdef GridFunctionTimeSeries < handle
 
             if obj.dim == 1
                 % Case in 1D ---------------------------------------------%
-                
-               if isa(medium,"AcousticMedium1D")
-                   [~,~,wspeed,~] = sampleMedium1D(obj.grid,medium);
-               else
+               
+                % Validating medium
+                if isa(medium,"AcousticMedium1D")
+                    [~,~,wspeed,~] = sampleMedium1D(obj.grid,medium);
+                else
                     error("GridFunctionTimeSeries:InvalidMedium",...
                         "In 1D, medium must be a valid AcousticMedium1D object.");
-               end
+                end
                
                 % Plotting wave-speed using right y-axis
                 yyaxis(ax,"right");
@@ -309,8 +310,17 @@ classdef GridFunctionTimeSeries < handle
                 ax.YAxis(1).Color = h.solution.Color;
 
             elseif obj.dim == 2
+                % 2D case ------------------------------------------------%
 
+                % Validating medium
+                if isa(medium,"AcousticMedium2D")
+                    [kappa,~,~,~,~] = sampleMedium2D(obj.grid,medium);
+                else
+                    error("GridFunctionTimeSeries:InvalidMedium",...
+                        "In 2D, medium must be a valid AcousticMedium2D object.");
+                end
 
+                % Plotting solution
                 h.solution = imagesc(ax, ...
                     obj.grid.x.pts, ...
                     obj.grid.y.pts, ...
@@ -325,6 +335,19 @@ classdef GridFunctionTimeSeries < handle
 
                 limits = obj.expandedLimits(obj.values)*options.relLimFactor;
                 clim(ax,limits);
+                hold(ax,"on")
+
+                % Plotting wave-speed as contour lines
+                [x_mesh,y_mesh] = obj.grid.mesh;
+                [~,h.medium] = contour(ax,x_mesh,y_mesh, ...
+                    kappa.values, ...
+                    options.NumContours, ...
+                    "k", "LineWidth",0.75);
+
+                % Keep contours in top of image
+                uistack(h.medium,"top");
+                hold(ax,"off")
+
 
             else
                 error('GridFunctionTimeSeries:InvalidDimension', ...
