@@ -155,46 +155,6 @@ classdef AcousticMedium1D
 
             obj = AcousticMedium1D(kappa,beta);
         end
-
-        % %%%%%%%%
-        % function obj = gaussianPeak(options)
-        %     arguments
-        %         options.KappaRange (1,2) double ...
-        %             {mustBePositive,mustBeFinite,mustBeIncreasingRange} = [1,2]
-        %         options.BetaRange (1,2) double ...
-        %             {mustBePositive,mustBeFinite,mustBeIncreasingRange} = [1,2]
-        %         options.Center (1,1) double = 1.5
-        %         options.Width  (1,1) double {mustBePositive} = 1
-        %     end
-        % 
-        %     kappa = AcousticMedium1D.makeGaussianPeakFunction( ...
-        %         options.KappaRange,options.Center,options.Width);
-        % 
-        %     beta = AcousticMedium1D.makeGaussianPeakFunction( ...
-        %         options.BetaRange,options.Center,options.Width);
-        % 
-        %     obj = AcousticMedium1D(kappa,beta);
-        % end
-        % 
-        % %%%%%%%%
-        % function obj = gaussianDip(options)
-        %     arguments
-        %         options.KappaRange (1,2) double ...
-        %             {mustBePositive,mustBeFinite,mustBeIncreasingRange} = [1,2]
-        %         options.BetaRange (1,2) double ...
-        %             {mustBePositive,mustBeFinite,mustBeIncreasingRange} = [1,2]
-        %         options.Center (1,1) double = 1.5
-        %         options.Width  (1,1) double {mustBePositive} = 1
-        %     end
-        % 
-        %     kappa = AcousticMedium1D.makeGaussianDipFunction( ...
-        %         options.KappaRange,options.Center,options.Width);
-        % 
-        %     beta = AcousticMedium1D.makeGaussianDipFunction( ...
-        %         options.BetaRange,options.Center,options.Width);
-        % 
-        %     obj = AcousticMedium1D(kappa,beta);
-        % end
     end
 
     %%
