@@ -155,6 +155,35 @@ classdef AcousticMedium1D
 
             obj = AcousticMedium1D(kappa,beta);
         end
+
+        %%%%%%%%%%%%
+        function obj = layered(options)
+            arguments
+                options.KappaValues (1,:) double ...
+                    {mustBePositive,mustBeFinite}
+                options.BetaValues (1,:) double ...
+                    {mustBePositive,mustBeFinite}
+                options.RelativeWidths (1,:) double ...
+                    {mustBePositive,mustBeFinite}
+                options.Domain (1,2) double ...
+                    {mustBeFinite,mustBeIncreasingRange} = [0,1]
+            end
+
+            AcousticMedium1D.validateLayerData( ...
+                options.KappaValues,options.BetaValues, ...
+                options.RelativeWidths);
+
+            edges = AcousticMedium1D.makeLayerEdges( ...
+                options.RelativeWidths,options.Domain);
+
+            kappa = AcousticMedium1D.makeLayerFunction( ...
+                options.KappaValues,edges);
+
+            beta = AcousticMedium1D.makeLayerFunction( ...
+                options.BetaValues,edges);
+
+            obj = AcousticMedium1D(kappa,beta);
+        end
     end
 
     %%
@@ -196,6 +225,30 @@ classdef AcousticMedium1D
             f = @(x) valueOutside + (valueInside-valueOutside).* ...
                 exp(-((x-center)./width).^2);
         end
+
+        function edges = makeLayerEdges(relativeWidths,domain)
+            widths = relativeWidths/sum(relativeWidths)*diff(domain);
+            edges = domain(1)+[0,cumsum(widths)];
+            edges(end) = domain(2);
+        end
+
+        function f = makeLayerFunction(values,edges)
+            f = @(x) AcousticMedium1D.evaluateLayers(x,values,edges);
+        end
+
+        function result = evaluateLayers(coordinates,values,edges)
+            layer = discretize(coordinates,edges);
+            result = reshape(values(layer(:)),size(coordinates));
+        end
+
+        function validateLayerData(kappaValues,betaValues,widths)
+            n = numel(widths);
+            if numel(kappaValues) ~= n || numel(betaValues) ~= n
+                error("AcousticMedium1D:InvalidLayerData", ...
+                    "KappaValues, BetaValues, and RelativeWidths must contain the same number of entries.");
+            end
+        end
+
     end
 end
 

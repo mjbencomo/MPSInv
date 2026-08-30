@@ -116,6 +116,17 @@ classdef TestAcousticMedium1D < matlab.unittest.TestCase
                 AbsTol=1e-14);
         end
 
+        function layeredUsesSpecifiedRelativeWidths(testCase)
+            medium = AcousticMedium1D.layered( ...
+                KappaValues=[2,4,6], BetaValues=[3,5,7], ...
+                RelativeWidths=[1,2,1], Domain=testCase.Domain);
+            % domain = [-1,1] -> layer edges at [-1, -0.5, 0.5, 1]
+            x = [-0.75, 0, 0.75];
+
+            testCase.verifyEqual(medium.evaluateKappa(x), [2,4,6]);
+            testCase.verifyEqual(medium.evaluateBeta(x), [3,5,7]);
+        end
+        
         function samplingOnPrimalGridUsesSameGrid(testCase)
             medium = AcousticMedium1D(@(x) 2+x,@(x) 4-x.^2);
 
