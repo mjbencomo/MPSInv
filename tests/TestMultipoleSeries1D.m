@@ -1,4 +1,4 @@
-classdef TestMultipoleSource1D < matlab.unittest.TestCase
+classdef TestMultipoleSeries1D < matlab.unittest.TestCase
     properties
         PressureGrid
         VelocityGrid
@@ -55,14 +55,26 @@ classdef TestMultipoleSource1D < matlab.unittest.TestCase
             testCase.verifyEqual(term.derivativeOrder,1);
             testCase.verifyEqual(term.targetField,"velocity");
             testCase.verifyEqual(term.evaluateTime(0.5),-3);
+            testCase.verifyTrue(isa(term,'MultipoleTerm'));
+        end
+
+        function singleTermBuildsAcousticSource(testCase)
+            term = MultipoleTerm1D(0.45,1,@(t) 1+t);
+            source = term.discretize( ...
+                testCase.PressureGrid,testCase.VelocityGrid, ...
+                ApproximationOrder=4);
+
+            testCase.verifyTrue(isa(source,'AcousticSource'));
+            testCase.verifyTrue(isa(source,'AcousticSource1D'));
+            testCase.verifyEqual(source.numberOfPressureTerms,1);
         end
 
         function discretizesPressureAndVelocityTerms(testCase)
             pressureTerm = MultipoleTerm1D(0.35,0,@(t) 1+t);
             velocityTerm = MultipoleTerm1D(0.65,1,@(t) 2-t, ...
                 TargetField="velocity");
-            mps = MultipoleSource1D( ...
-                [pressureTerm,velocityTerm],ApproximationOrder=4);
+            mps = MultipoleSeries1D( ...
+                [pressureTerm,velocityTerm],ApproximationOrders=4);
 
             source = mps.discretize( ...
                 testCase.PressureGrid,testCase.VelocityGrid);
@@ -79,13 +91,25 @@ classdef TestMultipoleSource1D < matlab.unittest.TestCase
                 norm(source.evaluatePrepared(preparedV,0.2)),0);
         end
 
+        function storesLocationsAndPerTermOrders(testCase)
+            terms = [ ...
+                MultipoleTerm1D(0.35,0,@(t) 1), ...
+                MultipoleTerm1D(0.65,1,@(t) 1,TargetField="velocity")];
+            series = MultipoleSeries1D( ...
+                terms,ApproximationOrders=[2,4]);
+
+            testCase.verifyEqual(series.numberOfTerms,2);
+            testCase.verifyEqual(series.locations,[0.35;0.65]);
+            testCase.verifyEqual(series.approximationOrders,[2,4]);
+        end
+
         function rejectsPressureStencilAtBoundary(testCase)
             term = MultipoleTerm1D(0,0,@(t) 1);
-            mps = MultipoleSource1D(term,ApproximationOrder=4);
+            mps = MultipoleSeries1D(term,ApproximationOrders=4);
 
             testCase.verifyError(@() mps.discretize( ...
                 testCase.PressureGrid,testCase.VelocityGrid), ...
-                'MultipoleSource1D:PressureStencilAtBoundary');
+                'MultipoleTerm1D:PressureStencilAtBoundary');
         end
 
         function multipoleSourceRunsInSolver(testCase)
@@ -98,7 +122,7 @@ classdef TestMultipoleSource1D < matlab.unittest.TestCase
                 EnforceCFL=false);
 
             term = MultipoleTerm1D(0.5,0,@(t) 1);
-            mps = MultipoleSource1D(term,ApproximationOrder=2);
+            mps = MultipoleSeries1D(term,ApproximationOrders=2);
             source = mps.discretize( ...
                 testCase.PressureGrid,testCase.VelocityGrid);
 

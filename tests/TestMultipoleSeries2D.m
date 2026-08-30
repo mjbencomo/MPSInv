@@ -1,4 +1,4 @@
-classdef TestMultipoleSource2D < matlab.unittest.TestCase
+classdef TestMultipoleSeries2D < matlab.unittest.TestCase
     % Tests for 2D multipole terms and tensor-product discretization.
 
     properties
@@ -28,12 +28,24 @@ classdef TestMultipoleSource2D < matlab.unittest.TestCase
             testCase.verifyEqual(term.derivativeOrder,[1,2]);
             testCase.verifyEqual(term.targetField,"velocityY");
             testCase.verifyEqual(term.evaluateTime(0.5),-3);
+            testCase.verifyTrue(isa(term,'MultipoleTerm'));
         end
 
         function rejectsInvalidTimeOutput(testCase)
             term = MultipoleTerm2D([0.5,0.5],[0,0],@(t) [1,2]);
             testCase.verifyError(@() term.evaluateTime(0), ...
-                'MultipoleTerm2D:InvalidTimeOutput');
+                'MultipoleTerm:InvalidTimeOutput');
+        end
+
+        function singleTermBuildsAcousticSource(testCase)
+            term = MultipoleTerm2D([0.45,0.55],[1,0],@(t) 1+t);
+            source = term.discretize( ...
+                testCase.PressureGrid,testCase.VelocityXGrid, ...
+                testCase.VelocityYGrid,ApproximationOrder=4);
+
+            testCase.verifyTrue(isa(source,'AcousticSource'));
+            testCase.verifyTrue(isa(source,'AcousticSource2D'));
+            testCase.verifyEqual(source.numberOfPressureTerms,1);
         end
 
         function tensorStencilSatisfiesScaledMoments(testCase)
@@ -41,7 +53,7 @@ classdef TestMultipoleSource2D < matlab.unittest.TestCase
             derivativeOrder = [1,2];
             location = [0.437,0.463];
             term = MultipoleTerm2D(location,derivativeOrder,@(t) 1);
-            mps = MultipoleSource2D(term,ApproximationOrder=q);
+            mps = MultipoleSeries2D(term,ApproximationOrders=q);
             source = mps.discretize(testCase.PressureGrid, ...
                 testCase.VelocityXGrid,testCase.VelocityYGrid);
             prepared = source.preparePressure(testCase.PressureGrid);
@@ -85,7 +97,7 @@ classdef TestMultipoleSource2D < matlab.unittest.TestCase
             derivativeOrder = [1,2];
             term = MultipoleTerm2D([0.453,0.557], ...
                 derivativeOrder,@(t) 1);
-            mps = MultipoleSource2D(term,ApproximationOrder=q);
+            mps = MultipoleSeries2D(term,ApproximationOrders=q);
             source = mps.discretize( ...
                 testCase.PressureGrid,testCase.VelocityXGrid, ...
                 testCase.VelocityYGrid);
@@ -104,9 +116,9 @@ classdef TestMultipoleSource2D < matlab.unittest.TestCase
             velocityYTerm = MultipoleTerm2D( ...
                 [0.45,0.55],[0,1],@(t) cos(t), ...
                 TargetField="velocityY");
-            mps = MultipoleSource2D( ...
+            mps = MultipoleSeries2D( ...
                 [pressureTerm,velocityXTerm,velocityYTerm], ...
-                ApproximationOrder=4);
+                ApproximationOrders=4);
 
             source = mps.discretize(testCase.PressureGrid, ...
                 testCase.VelocityXGrid,testCase.VelocityYGrid);
@@ -128,20 +140,34 @@ classdef TestMultipoleSource2D < matlab.unittest.TestCase
                 source.evaluatePrepared(preparedY,0.2),'fro'),0);
         end
 
+        function storesLocationsAndPerTermOrders(testCase)
+            terms = [ ...
+                MultipoleTerm2D([0.35,0.45],[0,0],@(t) 1), ...
+                MultipoleTerm2D([0.65,0.55],[1,0],@(t) 1, ...
+                    TargetField="velocityX")];
+            series = MultipoleSeries2D( ...
+                terms,ApproximationOrders=[2,4]);
+
+            testCase.verifyEqual(series.numberOfTerms,2);
+            testCase.verifyEqual(series.locations, ...
+                [0.35,0.45;0.65,0.55]);
+            testCase.verifyEqual(series.approximationOrders,[2,4]);
+        end
+
         function rejectsPressureStencilAtAnyBoundary(testCase)
             term = MultipoleTerm2D([0,0.5],[0,0],@(t) 1);
-            mps = MultipoleSource2D(term,ApproximationOrder=4);
+            mps = MultipoleSeries2D(term,ApproximationOrders=4);
 
             testCase.verifyError(@() mps.discretize( ...
                 testCase.PressureGrid,testCase.VelocityXGrid, ...
                 testCase.VelocityYGrid), ...
-                'MultipoleSource2D:PressureStencilAtBoundary');
+                'MultipoleTerm2D:PressureStencilAtBoundary');
         end
 
         function rejectsStencilOutsideGrid(testCase)
             term = MultipoleTerm2D([0.99,0.5],[2,0],@(t) 1, ...
                 TargetField="velocityX");
-            mps = MultipoleSource2D(term,ApproximationOrder=4);
+            mps = MultipoleSeries2D(term,ApproximationOrders=4);
 
             testCase.verifyError(@() mps.discretize( ...
                 testCase.PressureGrid,testCase.VelocityXGrid, ...
@@ -159,7 +185,7 @@ classdef TestMultipoleSource2D < matlab.unittest.TestCase
                 EnforceCFL=false);
 
             term = MultipoleTerm2D([0.5,0.5],[0,0],@(t) 1);
-            mps = MultipoleSource2D(term,ApproximationOrder=2);
+            mps = MultipoleSeries2D(term,ApproximationOrders=2);
             source = mps.discretize( ...
                 testCase.PressureGrid,testCase.VelocityXGrid, ...
                 testCase.VelocityYGrid);
