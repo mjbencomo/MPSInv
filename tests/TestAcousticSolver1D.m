@@ -1,4 +1,4 @@
-classdef TestAcousticSolver1DStaggeredOrders < matlab.unittest.TestCase
+classdef TestAcousticSolver1D < matlab.unittest.TestCase
     % Order-selection tests for the combined staggered solver.
 
     properties

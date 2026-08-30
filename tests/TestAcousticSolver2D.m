@@ -1,4 +1,4 @@
-classdef TestAcousticSolver2DStaggeredOrders < matlab.unittest.TestCase
+classdef TestAcousticSolver2D < matlab.unittest.TestCase
     % Order, source, boundary, and storage tests for the 2D solver.
 
     properties

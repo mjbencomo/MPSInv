@@ -1,4 +1,4 @@
-classdef AcousticSource2D < handle
+classdef AcousticSource2D < AcousticSource
     % AcousticSource2D represents sums of separable 2D acoustic sources.
     %
     %   f_p(x,y,t)  = sum_k g_{p,k}(x,y)  w_{p,k}(t)
@@ -84,6 +84,18 @@ classdef AcousticSource2D < handle
 
         function value = get.numberOfVelocityYTerms(obj)
             value = numel(obj.velocityYTerms);
+        end
+
+        function append(obj,other)
+            % Append all terms from another 2D acoustic source.
+            arguments
+                obj
+                other (1,1) AcousticSource2D
+            end
+
+            obj.pressureTerms = [obj.pressureTerms,other.pressureTerms];
+            obj.velocityXTerms = [obj.velocityXTerms,other.velocityXTerms];
+            obj.velocityYTerms = [obj.velocityYTerms,other.velocityYTerms];
         end
 
         function addPressureTerm(obj,spatialFunction,timeFunction)
@@ -302,12 +314,7 @@ classdef AcousticSource2D < handle
             end
             obj = AcousticSource2D.zero();
             for k = 1:numel(sources)
-                obj.pressureTerms = [obj.pressureTerms, ...
-                    sources{k}.pressureTerms]; %#ok<AGROW>
-                obj.velocityXTerms = [obj.velocityXTerms, ...
-                    sources{k}.velocityXTerms]; %#ok<AGROW>
-                obj.velocityYTerms = [obj.velocityYTerms, ...
-                    sources{k}.velocityYTerms]; %#ok<AGROW>
+                obj.append(sources{k});
             end
         end
     end

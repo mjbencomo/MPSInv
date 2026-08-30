@@ -1,11 +1,9 @@
-classdef MultipoleTerm1D
+classdef MultipoleTerm1D < MultipoleTerm
     % MultipoleTerm1D represents a(t) D^s delta(x-xc).
 
     properties (SetAccess = private)
         location (1,1) double = 0
         derivativeOrder (1,1) double = 0
-        timeFunction (1,1) function_handle = @(t) ones(size(t))
-        amplitude (1,1) double = 1
         targetField (1,1) string = "pressure"
     end
 
@@ -23,27 +21,61 @@ classdef MultipoleTerm1D
                     ["pressure","velocity"])} = "pressure"
             end
 
+            obj@MultipoleTerm(timeFunction,options.Amplitude);
             obj.location = location;
             obj.derivativeOrder = derivativeOrder;
-            obj.timeFunction = timeFunction;
-            obj.amplitude = options.Amplitude;
             obj.targetField = options.TargetField;
         end
 
-        function value = evaluateTime(obj,t)
-            % Evaluate the amplitude-scaled temporal factor.
+        function source = discretize( ...
+                obj,pressureGrid,velocityGrid,options)
+            % Construct an AcousticSource1D containing this term.
             arguments
                 obj
-                t (1,1) double {mustBeFinite}
+                pressureGrid (1,1) GridSpace1D
+                velocityGrid (1,1) GridSpace1D
+                options.ApproximationOrder (1,1) double ...
+                    {mustBeInteger,mustBePositive} = 4
             end
 
-            value = obj.timeFunction(t);
-            if ~isnumeric(value) || ~isscalar(value) || ~isfinite(value)
-                error('MultipoleTerm1D:InvalidTimeOutput', ...
-                    ['The time function must return one finite numeric ' ...
-                     'scalar for a scalar time input.']);
+            source = AcousticSource1D.zero();
+            obj.addTo(source,pressureGrid,velocityGrid, ...
+                options.ApproximationOrder);
+        end
+
+        function addTo(obj,source,pressureGrid,velocityGrid,q)
+            % Discretize this term and append it to source.
+            arguments
+                obj
+                source (1,1) AcousticSource1D
+                pressureGrid (1,1) GridSpace1D
+                velocityGrid (1,1) GridSpace1D
+                q (1,1) double {mustBeInteger,mustBePositive}
             end
-            value = obj.amplitude*value;
+
+            timeFactor = @(t) obj.evaluateTime(t);
+            switch obj.targetField
+                case "pressure"
+                    [~,indices,weights] = MPSappx(pressureGrid, ...
+                        obj.location,q,obj.derivativeOrder);
+
+                    if any(indices == 1 | indices == pressureGrid.N)
+                        error( ...
+                            'MultipoleTerm1D:PressureStencilAtBoundary', ...
+                            ['The pressure multipole stencil must exclude ' ...
+                             'the pressure-grid endpoints.']);
+                    end
+
+                    source.addLocalizedPressureTerm( ...
+                        pressureGrid,indices,weights,timeFactor);
+
+                case "velocity"
+                    [~,indices,weights] = MPSappx(velocityGrid, ...
+                        obj.location,q,obj.derivativeOrder);
+                    source.addLocalizedVelocityTerm( ...
+                        velocityGrid,indices,weights,timeFactor);
+            end
         end
     end
+
 end
