@@ -159,44 +159,6 @@ classdef AcousticMedium2D
             obj = AcousticMedium2D(kappa,beta);
         end
 
-        % %%%%%%%%
-        % function obj = gaussianPeak(options)
-        %     arguments
-        %         options.KappaRange (1,2) double ...
-        %             {mustBePositive,mustBeFinite,mustBeIncreasingRange} = [1,2]
-        %         options.BetaRange (1,2) double ...
-        %             {mustBePositive,mustBeFinite,mustBeIncreasingRange} = [1,2]
-        %         options.Center (1,2) double {mustBeFinite} = [0.5,0.5]
-        %         options.Width (1,2) double ...
-        %             {mustBePositive,mustBeFinite} = [1,1]
-        %     end
-        % 
-        %     kappa = AcousticMedium2D.makeGaussianFunction( ...
-        %         options.KappaRange,options.Center,options.Width,true);
-        %     beta = AcousticMedium2D.makeGaussianFunction( ...
-        %         options.BetaRange,options.Center,options.Width,true);
-        %     obj = AcousticMedium2D(kappa,beta);
-        % end
-        % 
-        % %%%%%%%%
-        % function obj = gaussianDip(options)
-        %     arguments
-        %         options.KappaRange (1,2) double ...
-        %             {mustBePositive,mustBeFinite,mustBeIncreasingRange} = [1,2]
-        %         options.BetaRange (1,2) double ...
-        %             {mustBePositive,mustBeFinite,mustBeIncreasingRange} = [1,2]
-        %         options.Center (1,2) double {mustBeFinite} = [0.5,0.5]
-        %         options.Width (1,2) double ...
-        %             {mustBePositive,mustBeFinite} = [1,1]
-        %     end
-        % 
-        %     kappa = AcousticMedium2D.makeGaussianFunction( ...
-        %         options.KappaRange,options.Center,options.Width,false);
-        %     beta = AcousticMedium2D.makeGaussianFunction( ...
-        %         options.BetaRange,options.Center,options.Width,false);
-        %     obj = AcousticMedium2D(kappa,beta);
-        % end
-
         %%%%%%%%
         function obj = layeredX(options)
             arguments
@@ -355,18 +317,6 @@ classdef AcousticMedium2D
 
             f = @(x,y) valueOutside + (valueInside-valueOutside).*gaussian(x,y);
         end
-
-        % %%%%%%%%
-        % function f = makeGaussianFunction(valueRange,center,width,isPeak)
-        %     gaussian = @(x,y) exp( ...
-        %         -((x-center(1))./width(1)).^2 ...
-        %         -((y-center(2))./width(2)).^2);
-        %     if isPeak
-        %         f = @(x,y) valueRange(1)+diff(valueRange).*gaussian(x,y);
-        %     else
-        %         f = @(x,y) valueRange(2)-diff(valueRange).*gaussian(x,y);
-        %     end
-        % end
 
         %%%%%%%%
         function edges = makeLayerEdges(relativeWidths,domain)

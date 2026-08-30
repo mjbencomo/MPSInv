@@ -196,24 +196,6 @@ classdef AcousticMedium1D
             f = @(x) valueOutside + (valueInside-valueOutside).* ...
                 exp(-((x-center)./width).^2);
         end
-
-        % %%%%%%%%
-        % function f = makeGaussianPeakFunction(valueRange,center,width)
-        %     valueMin = valueRange(1);
-        %     valueMax = valueRange(2);
-        % 
-        %     f = @(x) valueMin + (valueMax-valueMin).* ...
-        %         exp(-((x-center)./width).^2);
-        % end
-        % 
-        % %%%%%%%%
-        % function f = makeGaussianDipFunction(valueRange,center,width)
-        %     valueMin = valueRange(1);
-        %     valueMax = valueRange(2);
-        % 
-        %     f = @(x) valueMax - (valueMax-valueMin).* ...
-        %         exp(-((x-center)./width).^2);
-        % end
     end
 end
 
