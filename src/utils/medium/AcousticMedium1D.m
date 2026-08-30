@@ -131,41 +131,56 @@ classdef AcousticMedium1D
         end
 
         %%%%%%%%
-        function obj = gaussianPeak(options)
+        function obj = gaussian(options)
             arguments
-                options.KappaRange (1,2) double ...
-                    {mustBePositive,mustBeFinite,mustBeIncreasingRange} = [1,2]
-                options.BetaRange (1,2) double ...
-                    {mustBePositive,mustBeFinite,mustBeIncreasingRange} = [1,2]
+                options.KappaInside (1,1) double ...
+                    {mustBePositive,mustBeFinite} = 1
+                options.KappaOutside (1,1) double ...
+                    {mustBePositive,mustBeFinite} = 2
+                options.BetaInside (1,1) double ...
+                    {mustBePositive,mustBeFinite} = 1
+                options.BetaOutside (1,1) double ...
+                    {mustBePositive,mustBeFinite} = 1
                 options.Center (1,1) double = 1.5
                 options.Width  (1,1) double {mustBePositive} = 1
             end
 
-            kappa = AcousticMedium1D.makeGaussianPeakFunction( ...
-                options.KappaRange,options.Center,options.Width);
+            kappa = AcousticMedium1D.makeGaussianFunction( ...
+                options.KappaInside,options.KappaOutside, ...
+                options.Center,options.Width);
 
-            beta = AcousticMedium1D.makeGaussianPeakFunction( ...
-                options.BetaRange,options.Center,options.Width);
+            beta = AcousticMedium1D.makeGaussianFunction( ...
+                options.BetaInside,options.BetaOutside, ...
+                options.Center,options.Width);
 
             obj = AcousticMedium1D(kappa,beta);
         end
 
-        %%%%%%%%
-        function obj = gaussianDip(options)
+        %%%%%%%%%%%%
+        function obj = layered(options)
             arguments
-                options.KappaRange (1,2) double ...
-                    {mustBePositive,mustBeFinite,mustBeIncreasingRange} = [1,2]
-                options.BetaRange (1,2) double ...
-                    {mustBePositive,mustBeFinite,mustBeIncreasingRange} = [1,2]
-                options.Center (1,1) double = 1.5
-                options.Width  (1,1) double {mustBePositive} = 1
+                options.KappaValues (1,:) double ...
+                    {mustBePositive,mustBeFinite}
+                options.BetaValues (1,:) double ...
+                    {mustBePositive,mustBeFinite}
+                options.RelativeWidths (1,:) double ...
+                    {mustBePositive,mustBeFinite}
+                options.Domain (1,2) double ...
+                    {mustBeFinite,mustBeIncreasingRange} = [0,1]
             end
 
-            kappa = AcousticMedium1D.makeGaussianDipFunction( ...
-                options.KappaRange,options.Center,options.Width);
+            AcousticMedium1D.validateLayerData( ...
+                options.KappaValues,options.BetaValues, ...
+                options.RelativeWidths);
 
-            beta = AcousticMedium1D.makeGaussianDipFunction( ...
-                options.BetaRange,options.Center,options.Width);
+            edges = AcousticMedium1D.makeLayerEdges( ...
+                options.RelativeWidths,options.Domain);
+
+            kappa = AcousticMedium1D.makeLayerFunction( ...
+                options.KappaValues,edges);
+
+            beta = AcousticMedium1D.makeLayerFunction( ...
+                options.BetaValues,edges);
 
             obj = AcousticMedium1D(kappa,beta);
         end
@@ -206,22 +221,34 @@ classdef AcousticMedium1D
         end
 
         %%%%%%%%
-        function f = makeGaussianPeakFunction(valueRange,center,width)
-            valueMin = valueRange(1);
-            valueMax = valueRange(2);
-
-            f = @(x) valueMin + (valueMax-valueMin).* ...
+        function f = makeGaussianFunction(valueInside,valueOutside,center,width)
+            f = @(x) valueOutside + (valueInside-valueOutside).* ...
                 exp(-((x-center)./width).^2);
         end
 
-        %%%%%%%%
-        function f = makeGaussianDipFunction(valueRange,center,width)
-            valueMin = valueRange(1);
-            valueMax = valueRange(2);
-
-            f = @(x) valueMax - (valueMax-valueMin).* ...
-                exp(-((x-center)./width).^2);
+        function edges = makeLayerEdges(relativeWidths,domain)
+            widths = relativeWidths/sum(relativeWidths)*diff(domain);
+            edges = domain(1)+[0,cumsum(widths)];
+            edges(end) = domain(2);
         end
+
+        function f = makeLayerFunction(values,edges)
+            f = @(x) AcousticMedium1D.evaluateLayers(x,values,edges);
+        end
+
+        function result = evaluateLayers(coordinates,values,edges)
+            layer = discretize(coordinates,edges);
+            result = reshape(values(layer(:)),size(coordinates));
+        end
+
+        function validateLayerData(kappaValues,betaValues,widths)
+            n = numel(widths);
+            if numel(kappaValues) ~= n || numel(betaValues) ~= n
+                error("AcousticMedium1D:InvalidLayerData", ...
+                    "KappaValues, BetaValues, and RelativeWidths must contain the same number of entries.");
+            end
+        end
+
     end
 end
 

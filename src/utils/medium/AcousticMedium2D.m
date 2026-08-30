@@ -135,40 +135,27 @@ classdef AcousticMedium2D
         end
 
         %%%%%%%%
-        function obj = gaussianPeak(options)
+        function obj = gaussian(options)
             arguments
-                options.KappaRange (1,2) double ...
-                    {mustBePositive,mustBeFinite,mustBeIncreasingRange} = [1,2]
-                options.BetaRange (1,2) double ...
-                    {mustBePositive,mustBeFinite,mustBeIncreasingRange} = [1,2]
+                options.KappaInside (1,1) double ...
+                    {mustBePositive,mustBeFinite} = 1
+                options.KappaOutside (1,1) double ...
+                    {mustBePositive,mustBeFinite} = 2
+                options.BetaInside (1,1) double ...
+                    {mustBePositive,mustBeFinite} = 1
+                options.BetaOutside (1,1) double ...
+                    {mustBePositive,mustBeFinite} = 2  
                 options.Center (1,2) double {mustBeFinite} = [0.5,0.5]
                 options.Width (1,2) double ...
                     {mustBePositive,mustBeFinite} = [1,1]
             end
 
             kappa = AcousticMedium2D.makeGaussianFunction( ...
-                options.KappaRange,options.Center,options.Width,true);
+                options.KappaInside,options.KappaOutside, ...
+                options.Center,options.Width);
             beta = AcousticMedium2D.makeGaussianFunction( ...
-                options.BetaRange,options.Center,options.Width,true);
-            obj = AcousticMedium2D(kappa,beta);
-        end
-
-        %%%%%%%%
-        function obj = gaussianDip(options)
-            arguments
-                options.KappaRange (1,2) double ...
-                    {mustBePositive,mustBeFinite,mustBeIncreasingRange} = [1,2]
-                options.BetaRange (1,2) double ...
-                    {mustBePositive,mustBeFinite,mustBeIncreasingRange} = [1,2]
-                options.Center (1,2) double {mustBeFinite} = [0.5,0.5]
-                options.Width (1,2) double ...
-                    {mustBePositive,mustBeFinite} = [1,1]
-            end
-
-            kappa = AcousticMedium2D.makeGaussianFunction( ...
-                options.KappaRange,options.Center,options.Width,false);
-            beta = AcousticMedium2D.makeGaussianFunction( ...
-                options.BetaRange,options.Center,options.Width,false);
+                options.BetaInside,options.BetaOutside, ...
+                options.Center,options.Width);
             obj = AcousticMedium2D(kappa,beta);
         end
 
@@ -321,15 +308,14 @@ classdef AcousticMedium2D
         end
 
         %%%%%%%%
-        function f = makeGaussianFunction(valueRange,center,width,isPeak)
+        function f = makeGaussianFunction( ...
+                valueInside, valueOutside,center,width)
+
             gaussian = @(x,y) exp( ...
                 -((x-center(1))./width(1)).^2 ...
                 -((y-center(2))./width(2)).^2);
-            if isPeak
-                f = @(x,y) valueRange(1)+diff(valueRange).*gaussian(x,y);
-            else
-                f = @(x,y) valueRange(2)-diff(valueRange).*gaussian(x,y);
-            end
+
+            f = @(x,y) valueOutside + (valueInside-valueOutside).*gaussian(x,y);
         end
 
         %%%%%%%%

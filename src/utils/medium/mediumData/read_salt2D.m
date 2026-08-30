@@ -47,5 +47,9 @@ fclose(fileID);
 % Note, we transpose since we expect kappa(i,j) = kappa(x_i,y_i)
 kappaData = (vel.^2)./betaData;
 
-%% Saving arrays
-save('salt2D_data.mat','betaData','kappaData','xData','yData','xDom','yDom','units');
+%% Saving data
+projectRoot = currentProject().RootFolder;
+matFile = fullfile(projectRoot, ...
+    "src","utils","medium","mediumData",...
+    "salt2D_data.mat");
+save(matFile,'betaData','kappaData','xData','yData','xDom','yDom','units');
