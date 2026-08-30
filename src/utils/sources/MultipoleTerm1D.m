@@ -77,4 +77,5 @@ classdef MultipoleTerm1D < MultipoleTerm
             end
         end
     end
+
 end

@@ -1,15 +1,11 @@
 classdef (Abstract) MultipoleTerm
     % MultipoleTerm is the common base class for one multipole term.
+    % Concrete subclasses expose validated location, derivativeOrder, and
+    % targetField properties appropriate to their spatial dimension.
 
     properties (SetAccess = private)
-        timeFunction (1,1) function_handle
-        amplitude (1,1) double
-    end
-
-    properties (Abstract, SetAccess = private)
-        location
-        derivativeOrder
-        targetField
+        timeFunction (1,1) function_handle = @(t) ones(size(t))
+        amplitude (1,1) double = 1
     end
 
     methods
@@ -38,6 +34,7 @@ classdef (Abstract) MultipoleTerm
             end
             value = obj.amplitude*value;
         end
+
     end
 
     methods (Abstract)
