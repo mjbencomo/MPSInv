@@ -1,4 +1,4 @@
-classdef AcousticSource1D < handle
+classdef AcousticSource1D < AcousticSource
     % AcousticSource1D represents sums of separable 1D acoustic sources.
     %
     %   f_p(x,t) = sum_k g_{p,k}(x) w_{p,k}(t)
@@ -64,6 +64,17 @@ classdef AcousticSource1D < handle
 
         function value = get.numberOfVelocityTerms(obj)
             value = numel(obj.velocityTerms);
+        end
+
+        function append(obj,other)
+            % Append all terms from another 1D acoustic source.
+            arguments
+                obj
+                other (1,1) AcousticSource1D
+            end
+
+            obj.pressureTerms = [obj.pressureTerms,other.pressureTerms];
+            obj.velocityTerms = [obj.velocityTerms,other.velocityTerms];
         end
 
         function addPressureTerm(obj,spatialFunction,timeFunction)
@@ -254,10 +265,7 @@ classdef AcousticSource1D < handle
             end
             obj = AcousticSource1D.zero();
             for k = 1:numel(sources)
-                obj.pressureTerms = [obj.pressureTerms, ...
-                    sources{k}.pressureTerms]; %#ok<AGROW>
-                obj.velocityTerms = [obj.velocityTerms, ...
-                    sources{k}.velocityTerms]; %#ok<AGROW>
+                obj.append(sources{k});
             end
         end
     end

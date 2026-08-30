@@ -36,6 +36,7 @@ classdef TestAcousticSource2D < matlab.unittest.TestCase
         function zeroFactoryReturnsZeroSource(testCase)
             source = AcousticSource2D.zero();
             [X,Y] = testCase.PressureGrid.mesh();
+            testCase.verifyTrue(isa(source,'AcousticSource'));
             testCase.verifyEqual(source.evaluatePressure(X,Y,2),zeros(size(X)));
         end
 
@@ -229,6 +230,15 @@ classdef TestAcousticSource2D < matlab.unittest.TestCase
             testCase.verifyEqual(combined.evaluatePressure(X,Y,0), ...
                 source1.evaluatePressure(X,Y,0)+ ...
                 source2.evaluatePressure(X,Y,0),AbsTol=1e-14);
+        end
+
+        function appendsCompatibleSource(testCase)
+            source1 = AcousticSource2D(@(x,y) x+y,@(t) 2);
+            source2 = AcousticSource2D(@(x,y) 1+x+y,@(t) 3);
+
+            source1.append(source2);
+
+            testCase.verifyEqual(source1.numberOfPressureTerms,2);
         end
     end
 end

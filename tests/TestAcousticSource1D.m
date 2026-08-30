@@ -29,6 +29,7 @@ classdef TestAcousticSource1D < matlab.unittest.TestCase
             source = AcousticSource1D.zero();
             x = linspace(-1,1,5).';
 
+            testCase.verifyTrue(isa(source,'AcousticSource'));
             testCase.verifyEqual(source.evaluatePressure(x,2),zeros(5,1));
             testCase.verifyEqual(source.evaluateVelocity(x,2),zeros(5,1));
         end
@@ -204,6 +205,15 @@ classdef TestAcousticSource1D < matlab.unittest.TestCase
             testCase.verifyEqual(combined.evaluatePressure(x,0), ...
                 source1.evaluatePressure(x,0)+ ...
                 source2.evaluatePressure(x,0),AbsTol=1e-14);
+        end
+
+        function appendsCompatibleSource(testCase)
+            source1 = AcousticSource1D(@(x) x,@(t) 2);
+            source2 = AcousticSource1D(@(x) 1+x,@(t) 3);
+
+            source1.append(source2);
+
+            testCase.verifyEqual(source1.numberOfPressureTerms,2);
         end
     end
 end
