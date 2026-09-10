@@ -4,15 +4,15 @@ classdef TestMultipoleComponent1D < matlab.unittest.TestCase
             component = MultipoleComponent1D( ...
                 0.4,1, ...
                 TargetField="velocity", ...
-                ApproximationOrder=6, ...
-                Label="Velocity dipole");
+                ApproximationOrder=6);
 
             testCase.verifyTrue(isa(component,'MultipoleComponent'));
             testCase.verifyEqual(component.location,0.4);
             testCase.verifyEqual(component.derivativeOrder,1);
             testCase.verifyEqual(component.targetField,"velocity");
             testCase.verifyEqual(component.approximationOrder,6);
-            testCase.verifyEqual(component.label,"Velocity dipole");
+            testCase.verifyEqual(component.description(), ...
+                "velocity multipole, derivative order 1, at x = 0.4");
         end
 
         function defaultsAreApplied(testCase)
@@ -20,7 +20,6 @@ classdef TestMultipoleComponent1D < matlab.unittest.TestCase
 
             testCase.verifyEqual(component.targetField,"pressure");
             testCase.verifyEqual(component.approximationOrder,4);
-            testCase.verifyEqual(component.label,"");
         end
 
         function constructsTermWithTimeFunction(testCase)

@@ -8,19 +8,16 @@ classdef (Abstract) MultipoleComponent
 
     properties (SetAccess = private)
         approximationOrder (1,1) double = 4
-        label (1,1) string = ""
     end
 
     methods
-        function obj = MultipoleComponent(approximationOrder,label)
+        function obj = MultipoleComponent(approximationOrder)
             arguments
                 approximationOrder (1,1) double ...
                     {mustBeInteger,mustBePositive} = 4
-                label (1,1) string = ""
             end
 
             obj.approximationOrder = approximationOrder;
-            obj.label = label;
         end
     end
 

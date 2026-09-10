@@ -20,14 +20,23 @@ classdef MultipoleComponent2D < MultipoleComponent
                     ["pressure","velocityX","velocityY"])} = "pressure"
                 options.ApproximationOrder (1,1) double ...
                     {mustBeInteger,mustBePositive} = 4
-                options.Label (1,1) string = ""
             end
 
-            obj@MultipoleComponent( ...
-                options.ApproximationOrder,options.Label);
+            obj@MultipoleComponent(options.ApproximationOrder);
             obj.location = location;
             obj.derivativeOrder = derivativeOrder;
             obj.targetField = options.TargetField;
+        end
+
+        function text = description(obj)
+            % Return a readable description generated from component data.
+            text = sprintf([ ...
+                '%s multipole, derivative order [%d,%d], ' ...
+                'at [x,y] = [%.6g,%.6g]'], ...
+                obj.targetField, ...
+                obj.derivativeOrder(1),obj.derivativeOrder(2), ...
+                obj.location(1),obj.location(2));
+            text = string(text);
         end
 
         function term = withTimeFunction(obj,timeFunction,options)
