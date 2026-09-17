@@ -1,6 +1,6 @@
 classdef MultipoleComponent2D < MultipoleComponent
     % MultipoleComponent2D describes
-    % Dx^sx Dy^sy delta(x-xc,y-yc) without its time function.
+    % Dx^sx Dy^sy delta(x-xc,y-yc).
 
     properties (SetAccess = private)
         location (1,2) double = [0,0]
@@ -18,11 +18,8 @@ classdef MultipoleComponent2D < MultipoleComponent
                 options.TargetField (1,1) string ...
                     {mustBeMember(options.TargetField, ...
                     ["pressure","velocityX","velocityY"])} = "pressure"
-                options.ApproximationOrder (1,1) double ...
-                    {mustBeInteger,mustBePositive} = 4
             end
 
-            obj@MultipoleComponent(options.ApproximationOrder);
             obj.location = location;
             obj.derivativeOrder = derivativeOrder;
             obj.targetField = options.TargetField;
@@ -39,18 +36,29 @@ classdef MultipoleComponent2D < MultipoleComponent
             text = string(text);
         end
 
-        function term = withTimeFunction(obj,timeFunction,options)
-            % Construct a MultipoleTerm2D from this spatial component.
+        function [indices,weights,xIndices,yIndices] = createStencil( ...
+                obj,grid,approximationOrder)
+            % Discretize the component using a tensor-product stencil.
             arguments
                 obj
-                timeFunction (1,1) function_handle
-                options.Amplitude (1,1) double {mustBeFinite} = 1
+                grid (1,1) GridSpace2D
+                approximationOrder (1,1) double ...
+                    {mustBeInteger,mustBePositive}
             end
 
-            term = MultipoleTerm2D( ...
-                obj.location,obj.derivativeOrder,timeFunction, ...
-                Amplitude=options.Amplitude, ...
-                TargetField=obj.targetField);
+            [~,xIndices,xWeights] = MPSappx( ...
+                grid.x.pts,obj.location(1),approximationOrder, ...
+                obj.derivativeOrder(1));
+            [~,yIndices,yWeights] = MPSappx( ...
+                grid.y.pts,obj.location(2),approximationOrder, ...
+                obj.derivativeOrder(2));
+
+            [IX,IY] = ndgrid(xIndices,yIndices);
+            weights = xWeights(:)*yWeights(:).';
+            indices = sub2ind(grid.N,IX,IY);
+
+            indices = indices(:);
+            weights = weights(:);
         end
     end
 end

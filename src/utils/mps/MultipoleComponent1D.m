@@ -1,6 +1,5 @@
 classdef MultipoleComponent1D < MultipoleComponent
-    % MultipoleComponent1D describes D^s delta(x-xc) without its time
-    % function.
+    % MultipoleComponent1D describes D^s delta(x-xc).
 
     properties (SetAccess = private)
         location (1,1) double = 0
@@ -18,11 +17,8 @@ classdef MultipoleComponent1D < MultipoleComponent
                 options.TargetField (1,1) string ...
                     {mustBeMember(options.TargetField, ...
                     ["pressure","velocity"])} = "pressure"
-                options.ApproximationOrder (1,1) double ...
-                    {mustBeInteger,mustBePositive} = 4
             end
 
-            obj@MultipoleComponent(options.ApproximationOrder);
             obj.location = location;
             obj.derivativeOrder = derivativeOrder;
             obj.targetField = options.TargetField;
@@ -36,18 +32,19 @@ classdef MultipoleComponent1D < MultipoleComponent
             text = string(text);
         end
 
-        function term = withTimeFunction(obj,timeFunction,options)
-            % Construct a MultipoleTerm1D from this spatial component.
+        function [indices,weights,values] = createStencil( ...
+                obj,grid,approximationOrder)
+            % Discretize the component on a one-dimensional grid.
             arguments
                 obj
-                timeFunction (1,1) function_handle
-                options.Amplitude (1,1) double {mustBeFinite} = 1
+                grid (1,1) GridSpace1D
+                approximationOrder (1,1) double ...
+                    {mustBeInteger,mustBePositive}
             end
 
-            term = MultipoleTerm1D( ...
-                obj.location,obj.derivativeOrder,timeFunction, ...
-                Amplitude=options.Amplitude, ...
-                TargetField=obj.targetField);
+            [values,indices,weights] = MPSappx( ...
+                grid,obj.location,approximationOrder, ...
+                obj.derivativeOrder);
         end
     end
 end
