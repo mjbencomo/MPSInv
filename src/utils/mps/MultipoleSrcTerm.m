@@ -1,26 +1,43 @@
-classdef (Abstract) MultipoleTerm
-    % MultipoleTerm is the common base class for one multipole term.
-    % Concrete subclasses expose validated location, derivativeOrder, and
-    % targetField properties appropriate to their spatial dimension.
+classdef (Abstract) MultipoleSrcTerm
+    % MultipoleSrcTerm combines one spatial multipole component with its
+    % time-dependent coefficient.
 
     properties (SetAccess = private)
-        timeFunction (1,1) function_handle = @(t) ones(size(t))
-        amplitude (1,1) double = 1
+        component 
+        timeFunction
+    end
+
+    properties (Dependent)
+        location
+        derivativeOrder
+        targetField
     end
 
     methods
-        function obj = MultipoleTerm(timeFunction,amplitude)
+        function obj = MultipoleSrcTerm(component,timeFunction)
             arguments
+                component (1,1) MultipoleComponent
                 timeFunction (1,1) function_handle
-                amplitude (1,1) double {mustBeFinite} = 1
             end
 
+            obj.component = component;
             obj.timeFunction = timeFunction;
-            obj.amplitude = amplitude;
+        end
+
+        function value = get.location(obj)
+            value = obj.component.location;
+        end
+
+        function value = get.derivativeOrder(obj)
+            value = obj.component.derivativeOrder;
+        end
+
+        function value = get.targetField(obj)
+            value = obj.component.targetField;
         end
 
         function value = evaluateTime(obj,t)
-            % Evaluate the amplitude-scaled temporal factor.
+            % Evaluate the complete temporal coefficient w(t).
             arguments
                 obj
                 t (1,1) double {mustBeFinite}
@@ -28,13 +45,11 @@ classdef (Abstract) MultipoleTerm
 
             value = obj.timeFunction(t);
             if ~isnumeric(value) || ~isscalar(value) || ~isfinite(value)
-                error('MultipoleTerm:InvalidTimeOutput', ...
+                error('MultipoleSrcTerm:InvalidTimeOutput', ...
                     ['The time function must return one finite numeric ' ...
                      'scalar for a scalar time input.']);
             end
-            value = obj.amplitude*value;
         end
-
     end
 
     methods (Abstract)

@@ -29,7 +29,7 @@ hold(ax,'on')
 switch gridFun.dim
     case 1
         % Validate types
-        if ~isa(source_mps,'MultipoleTerm1D') && ~isa(source_mps,'MultipoleSeries1D')
+        if ~isa(source_mps,'MultipoleSrcTerm1D') && ~isa(source_mps,'MultipoleSrcSeries1D')
             error('plotAcqGeo:InvalidSource', ...
                 'Source must be MultipoleTerm1D or MultipoleSeries1D for 1D.');
         end
@@ -39,7 +39,7 @@ switch gridFun.dim
         end
 
         % Source locations (column vector)
-        if isa(source_mps,'MultipoleTerm1D')
+        if isa(source_mps,'MultipoleSrcTerm1D')
             src_locX = source_mps.location;
         else
             src_locX = source_mps.locations;
@@ -66,7 +66,7 @@ switch gridFun.dim
 
     case 2
         % Validate types
-        if ~isa(source_mps,'MultipoleTerm2D') && ~isa(source_mps,'MultipoleSeries2D')
+        if ~isa(source_mps,'MultipoleSrcTerm2D') && ~isa(source_mps,'MultipoleSrcSeries2D')
             error('plotAcqGeo:InvalidSource', ...
                 'Source must be MultipoleTerm2D or MultipoleSeries2D for 2D.');
         end
@@ -76,7 +76,7 @@ switch gridFun.dim
         end
 
         % Source locations (Nx2)
-        if isa(source_mps,'MultipoleTerm2D')
+        if isa(source_mps,'MultipoleSrcTerm2D')
             source_loc = source_mps.location;
         else
             source_loc = source_mps.locations;
