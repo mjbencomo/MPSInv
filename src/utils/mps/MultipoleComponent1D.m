@@ -1,6 +1,10 @@
 classdef MultipoleComponent1D < MultipoleComponent
+<<<<<<< HEAD
     % MultipoleComponent1D describes D^s delta(x-xc) without its time
     % function.
+=======
+    % MultipoleComponent1D describes D^s delta(x-xc).
+>>>>>>> b0d5b1dcea97a019fdcf42ee218d06a571246d9f
 
     properties (SetAccess = private)
         location (1,1) double = 0
@@ -18,11 +22,16 @@ classdef MultipoleComponent1D < MultipoleComponent
                 options.TargetField (1,1) string ...
                     {mustBeMember(options.TargetField, ...
                     ["pressure","velocity"])} = "pressure"
+<<<<<<< HEAD
                 options.ApproximationOrder (1,1) double ...
                     {mustBeInteger,mustBePositive} = 4
             end
 
             obj@MultipoleComponent(options.ApproximationOrder);
+=======
+            end
+
+>>>>>>> b0d5b1dcea97a019fdcf42ee218d06a571246d9f
             obj.location = location;
             obj.derivativeOrder = derivativeOrder;
             obj.targetField = options.TargetField;
@@ -36,6 +45,7 @@ classdef MultipoleComponent1D < MultipoleComponent
             text = string(text);
         end
 
+<<<<<<< HEAD
         function term = withTimeFunction(obj,timeFunction,options)
             % Construct a MultipoleTerm1D from this spatial component.
             arguments
@@ -48,6 +58,21 @@ classdef MultipoleComponent1D < MultipoleComponent
                 obj.location,obj.derivativeOrder,timeFunction, ...
                 Amplitude=options.Amplitude, ...
                 TargetField=obj.targetField);
+=======
+        function [indices,weights,values] = createStencil( ...
+                obj,grid,approximationOrder)
+            % Discretize the component on a one-dimensional grid.
+            arguments
+                obj
+                grid (1,1) GridSpace1D
+                approximationOrder (1,1) double ...
+                    {mustBeInteger,mustBePositive}
+            end
+
+            [values,indices,weights] = MPSappx( ...
+                grid,obj.location,approximationOrder, ...
+                obj.derivativeOrder);
+>>>>>>> b0d5b1dcea97a019fdcf42ee218d06a571246d9f
         end
     end
 end
