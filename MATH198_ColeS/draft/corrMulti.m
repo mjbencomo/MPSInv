@@ -1,16 +1,16 @@
-function Y = corrMulti(kernel,X)
+function X = corrMulti(kernel,Y)
 %CORRMULTI Compute a discrete multi-channel cross-correlation
-%   Y = CORRMULTI(KERNEL,X) computes the multi-channel cross-correlation
+%   X = CORRMULTI(KERNEL,Y) computes the multi-channel cross-correlation
 %
-%       Y(:,n) = sum_m corrDisc(KERNEL(:,n,m),X(:,m)).
+%       X(:,m) = sum_n corrDisc(KERNEL(:,n,m),Y(:,n)).
 %
-%   If X has size K-by-M, then KERNEL must have size
+%   If Y has size K-by-N, then KERNEL must have size
 %   (2*K-1)-by-N-by-M, where
 %
 %       KERNEL(:,n,m)
 %
 %   is the cross-correlation kernel mapping input channel m to output channel n.
-%   The output Y has size K-by-N.
+%   The output X has size K-by-M.
 %
 %   For one output channel and multiple input channels, KERNEL must retain
 %   its singleton output dimension; for example, its size should be
@@ -18,12 +18,12 @@ function Y = corrMulti(kernel,X)
 
 arguments
     kernel {mustBeNumeric,mustBeNonempty,mustBeReal}
-    X      {mustBeNumeric,mustBeNonempty,mustBeReal}
+    Y      {mustBeNumeric,mustBeNonempty,mustBeReal}
 end
 
-if ~ismatrix(X)
+if ~ismatrix(Y)
     error('corrMulti:InvalidInputDimensions', ...
-        'X must be a two-dimensional matrix with one column per input channel.');
+        'Y must be a two-dimensional matrix with one column per output channel.');
 end
 
 if ndims(kernel) > 3
@@ -31,7 +31,7 @@ if ndims(kernel) > 3
         'kernel must have size (2*K-1)-by-N-by-M.');
 end
 
-K = size(X,1);
+K = size(Y,1);
 N = size(kernel,2);
 M = size(kernel,3);
 
@@ -40,16 +40,16 @@ if size(kernel,1) ~= 2*K-1
         'The first dimension of kernel must equal 2*size(X,1)-1.');
 end
 
-if size(X,2) ~= M
+if size(Y,2) ~= N
     error('corrMulti:InputSizeMismatch', ...
-        'The number of columns in X must equal size(kernel,3).');
+        'The number of columns in Y must equal size(kernel,3).');
 end
 
-Y = zeros(K,N,'like',X);
+X = zeros(K,M,'like',Y);
 
-for n = 1:N
-    for m = 1:M
-        Y(:,n) = Y(:,n) + corrDisc(kernel(:,n,m),X(:,m));
+for m = 1:M
+    for n = 1:N
+        X(:,m) = X(:,m) + corrDisc(kernel(:,n,m),Y(:,n));
     end
 end
 end

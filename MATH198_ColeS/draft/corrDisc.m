@@ -1,49 +1,49 @@
-function y = convDisc(kernel,x)
-%CORRDISC Discrete cross-correlation via FFT-based circular cross-correlation.
-%   y = CORRDISC(kernel,x) computes the discrete cross-correlation of the real,
-%   numeric vectors kernel and x by converting it to a circular
+function x = corrDisc(kernel,y)
+%CORRDISC Disccorrrete cross-correlation via FFT-based circular cross-correlation.
+%   x = CORRDISC(kernel,y) computes the discrete cross-correlation of the real,
+%   numeric vectors kernel and y by converting it to a circular
 %   cross-correlation problem and evaluating that with FFTs.
 %
 %   Assumptions:
-%   - kernel and x must be nonempty real vectors
-%   - numel(kernel) must equal 2*numel(x)-1
-%   - the output y has the same orientation as x
+%   - kernel and y must be nonempty real vectors
+%   - numel(kernel) must equal 2*numel(y)-1
+%   - the output x has the same orientation as y
 %
 %   The implementation forms zero-padded, shifted vectors and calls
 %   CORRCIRC, which computes the circular cross-correlation using FFTs.
 
 arguments
     kernel {mustBeNumeric, mustBeVector, mustBeNonempty, mustBeReal}
-    x      {mustBeNumeric, mustBeVector, mustBeNonempty, mustBeReal}
+    y      {mustBeNumeric, mustBeVector, mustBeNonempty, mustBeReal}
 end
 
-n = numel(x);
+n = numel(y);
 
 if numel(kernel) ~= 2*n - 1
     error('corrDisc:SizeMismatch', ...
-        'The kernel must have length 2*numel(x)-1.');
+        'The kernel must have length 2*numel(y)-1.');
 end
 
 % Work with column vectors internally.
-outputIsRow = isrow(x);
+outputIsRow = isrow(y);
 kernel = kernel(:);
-x = x(:);
+y = y(:);
 
 % Step 1: construct the modified vectors.
 kernelZ = [kernel(n:end); ...
     zeros(1,1,'like',kernel); ...
     kernel(1:n-1)];
 
-xZ = [x; zeros(n,1,'like',x)];
+yZ = [y; zeros(n,1,'like',y)];
 
 % Step 2: compute their circular convolution
-yZ = corrCirc(kernelZ,xZ);
+xZ = corrCirc(kernelZ,yZ);
 
 % Step 3: extract the first n entries.
-y = yZ(1:n);
+x = xZ(1:n);
 
-% Restore the orientation of y.
+% Restore the orientation of x.
 if outputIsRow
-    y = y.';
+    x = x.';
 end
 end

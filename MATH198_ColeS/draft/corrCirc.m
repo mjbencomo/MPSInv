@@ -1,7 +1,7 @@
 function y = corrCirc(kernel,x)
 %CORRCIRC Circular cross-correlation of two real vectors using FFTs.
-%   y = CORRCIRC(kernel,x) returns the circular cross-correlation of the real,
-%   numeric vectors kernel and x. Both inputs must be nonempty vectors of
+%   x = CORRCIRC(kernel,y) returns the circular cross-correlation of the real,
+%   numeric vectors kernel and y. Both inputs must be nonempty vectors of
 %   the same size.
 %
 %   The result is computed with FFT-based multiplication in the frequency
@@ -9,14 +9,14 @@ function y = corrCirc(kernel,x)
 
 arguments
     kernel {mustBeNumeric, mustBeVector, mustBeNonempty, mustBeReal}
-    x      {mustBeNumeric, mustBeVector, mustBeNonempty, mustBeReal}
+    y      {mustBeNumeric, mustBeVector, mustBeNonempty, mustBeReal}
 end
 
-if ~isequal(size(kernel),size(x))
+if ~isequal(size(kernel),size(y))
     error('corrCirc:SizeMismatch', ...
-        'kernel and x must have the same size.');
+        'kernel and y must have the same size.');
 
 end
 
-y = ifft(conj(fft(kernel)) .* fft(x), 'symmetric');
+x = ifft(conj(fft(kernel)) .* fft(y), 'symmetric');
 end
