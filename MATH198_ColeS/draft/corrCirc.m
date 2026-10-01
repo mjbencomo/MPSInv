@@ -1,4 +1,4 @@
-function y = corrCirc(kernel,x)
+function x = corrCirc(kernel,y)
 %CORRCIRC Circular cross-correlation of two real vectors using FFTs.
 %   x = CORRCIRC(kernel,y) returns the circular cross-correlation of the real,
 %   numeric vectors kernel and y. Both inputs must be nonempty vectors of
