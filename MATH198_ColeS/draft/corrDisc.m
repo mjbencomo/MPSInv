@@ -1,5 +1,5 @@
 function x = corrDisc(kernel,y)
-%CORRDISC Disccorrrete cross-correlation via FFT-based circular cross-correlation.
+%CORRDISC Discrete cross-correlation via FFT-based circular cross-correlation.
 %   x = CORRDISC(kernel,y) computes the discrete cross-correlation of the real,
 %   numeric vectors kernel and y by converting it to a circular
 %   cross-correlation problem and evaluating that with FFTs.

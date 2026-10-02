@@ -28,7 +28,7 @@ end
 
 if ndims(kernel) > 3
     error('corrMulti:InvalidKernelDimensions', ...
-        'kernel must have size (2*K-1)-by-N-by-M.');
+        'kernel must have size (2*K-1)-by-M-by-N.');
 end
 
 K = size(Y,1);

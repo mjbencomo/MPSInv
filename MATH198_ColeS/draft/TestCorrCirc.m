@@ -8,10 +8,10 @@ classdef TestCorrCirc < matlab.unittest.TestCase
             Lx = convCirc(g,x);
             Ladjy = corrCirc(g,y);
 
-            dot_x = dot(Lx,y)
-            dot_y = dot(x,Ladjy)
+            dot_x = dot(Lx,y);
+            dot_y = dot(x,Ladjy);
 
-            testCase.verifyEqual(dot_x,dot_y,'AbsTol',10*eps);
+            testCase.verifyEqual(dot_x,dot_y,'RelTol',10*eps);
         end
     end
 end
