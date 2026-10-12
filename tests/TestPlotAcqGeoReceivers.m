@@ -1,60 +1,100 @@
 classdef TestPlotAcqGeoReceivers < matlab.unittest.TestCase
     methods (Test)
-        function plotsOneDimensionalReceiverOrder(testCase)
+        function plotsOneDimensionalNumericLocations(testCase)
             grid = GridSpace1D(Grid1DUnifPrimal([0,1],5));
             background = GridFunction(grid);
             background.setValues(@(x) x);
-            source = MultipoleSrcTerm1D( ...
-                MultipoleComponent1D(0.5,0),@(t) 1);
-            receivers = ReceiverSpace1D([0.8;0.2;0.8]);
+            sourceX = [0.7;0.2];
+            receiverX = [0.8;0.3;0.8];
 
             fig = figure(Visible='off');
             cleanup = onCleanup(@() close(fig)); %#ok<NASGU>
-            ax = axes(fig);
-            h = plotAcqGeo(background,source,receivers,Parent=ax);
+            h = plotAcqGeo(background,sourceX,receiverX,Parent=axes(fig));
 
-            testCase.verifyEqual(h.src_rcv(1).XData,0.5);
-            testCase.verifyEqual(h.src_rcv(2).XData(:),receivers.points);
+            testCase.verifyEqual(h.src_rcv(1).XData(:),sourceX);
+            testCase.verifyEqual(h.src_rcv(2).XData(:),receiverX);
         end
 
-        function plotsPairedTwoDimensionalReceivers(testCase)
+        function plotsPairedTwoDimensionalNumericLocations(testCase)
             x = Grid1DUnifPrimal([0,1],5);
-            grid = GridSpace2D(x,x);
-            background = GridFunction(grid);
+            background = GridFunction(GridSpace2D(x,x));
             background.setValues(@(X,Y) X+Y);
-            source = MultipoleSrcTerm2D( ...
-                MultipoleComponent2D([0.5 0.5],[0,0]),@(t) 1);
-            xy = [0.1 0.8;0.7 0.2;0.1 0.8];
-            receivers = ReceiverSpace2D(xy);
+            sourceXY = [0.1 0.8;0.7 0.2];
+            receiverXY = [0.6 0.1;0.2 0.9;0.6 0.1];
 
             fig = figure(Visible='off');
             cleanup = onCleanup(@() close(fig)); %#ok<NASGU>
-            ax = axes(fig);
-            h = plotAcqGeo(background,source,receivers,Parent=ax);
+            h = plotAcqGeo(background,sourceXY,receiverXY, ...
+                Parent=axes(fig));
 
-            testCase.verifyEqual(h.src_rcv(2).XData(:),xy(:,1));
-            testCase.verifyEqual(h.src_rcv(2).YData(:),xy(:,2));
+            testCase.verifyEqual(h.src_rcv(1).XData(:),sourceXY(:,1));
+            testCase.verifyEqual(h.src_rcv(1).YData(:),sourceXY(:,2));
+            testCase.verifyEqual(h.src_rcv(2).XData(:),receiverXY(:,1));
+            testCase.verifyEqual(h.src_rcv(2).YData(:),receiverXY(:,2));
             testCase.verifyEqual(numel(h.src_rcv(2).XData),3);
         end
 
-        function preservesCartesianReceiverPlotting(testCase)
+        function rejectsSourceObjectAndComponentCell(testCase)
             x = Grid1DUnifPrimal([0,1],5);
-            grid = GridSpace2D(x,x);
-            background = GridFunction(grid);
-            source = MultipoleSrcTerm2D( ...
-                MultipoleComponent2D([0.5 0.5],[0,0]),@(t) 1);
-            receiverGrid = GridSpace2D( ...
-                Grid1DUnifPrimal([0,1],3), ...
-                Grid1DUnifPrimal([0,1],2));
-            [X,Y] = receiverGrid.mesh();
+            background = GridFunction(GridSpace2D(x,x));
+            component = MultipoleComponent2D([0.2 0.7],[0,0]);
+
+            testCase.verifyError(@() plotAcqGeo( ...
+                background,component,[0.5 0.5]), ...
+                'plotAcqGeo:InvalidSource');
+            testCase.verifyError(@() plotAcqGeo( ...
+                background,{component},[0.5 0.5]), ...
+                'plotAcqGeo:InvalidSource');
+        end
+
+        function rejectsReceiverSpaceObject(testCase)
+            x = Grid1DUnifPrimal([0,1],5);
+            background = GridFunction(GridSpace2D(x,x));
+            receivers = ReceiverSpace2D([0.2 0.8;0.7 0.3]);
+
+            testCase.verifyError(@() plotAcqGeo( ...
+                background,[0.5 0.5],receivers), ...
+                'plotAcqGeo:InvalidReceivers');
+        end
+
+        function rejectsWrongShapeAndNonfiniteLocations(testCase)
+            x = Grid1DUnifPrimal([0,1],5);
+            background = GridFunction(GridSpace2D(x,x));
+
+            testCase.verifyError(@() plotAcqGeo( ...
+                background,[0.2;0.3],[0.5 0.5]), ...
+                'plotAcqGeo:InvalidSource');
+            testCase.verifyError(@() plotAcqGeo( ...
+                background,[0.2 0.3],[NaN 0.5]), ...
+                'plotAcqGeo:InvalidReceivers');
+        end
+
+        function allowsEmptySourceLocations(testCase)
+            x = Grid1DUnifPrimal([0,1],5);
+            background = GridFunction(GridSpace2D(x,x));
 
             fig = figure(Visible='off');
             cleanup = onCleanup(@() close(fig)); %#ok<NASGU>
-            ax = axes(fig);
-            h = plotAcqGeo(background,source,receiverGrid,Parent=ax);
+            h = plotAcqGeo(background,zeros(0,2),[0.3 0.7], ...
+                Parent=axes(fig));
 
-            testCase.verifyEqual(h.src_rcv(2).XData(:),X(:));
-            testCase.verifyEqual(h.src_rcv(2).YData(:),Y(:));
+            testCase.verifyEqual(numel(h.src_rcv),2);
+            testCase.verifyEmpty(h.src_rcv(1).XData);
+            testCase.verifyEqual(h.src_rcv(2).XData,0.3);
+            testCase.verifyEqual(h.src_rcv(2).YData,0.7);
+        end
+
+        function allowsEmptyReceiverLocations(testCase)
+            grid = GridSpace1D(Grid1DUnifPrimal([0,1],5));
+            background = GridFunction(grid);
+
+            fig = figure(Visible='off');
+            cleanup = onCleanup(@() close(fig)); %#ok<NASGU>
+            h = plotAcqGeo(background,[0.2;0.8],[],Parent=axes(fig));
+
+            testCase.verifyEqual(numel(h.src_rcv),2);
+            testCase.verifyEqual(h.src_rcv(1).XData(:),[0.2;0.8]);
+            testCase.verifyEmpty(h.src_rcv(2).XData);
         end
     end
 end
