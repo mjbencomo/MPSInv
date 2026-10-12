@@ -14,6 +14,7 @@ classdef GridFunction < handle
 
     properties (Dependent)
         N
+        numPts
         dim
     end
 
@@ -35,7 +36,10 @@ classdef GridFunction < handle
             obj.units = options.Units;
 
             % Initialize values
-            if grid.dim == 1
+            if isa(grid,'ReceiverSpace1D') || isa(grid,'ReceiverSpace2D')
+                obj.values = zeros(grid.numPts,1);
+
+            elseif grid.dim == 1
                 obj.values = zeros(grid.N,1);
 
             elseif grid.dim == 2
@@ -70,7 +74,16 @@ classdef GridFunction < handle
 
         %%%%%%%%
         function value = get.N(obj)
+            if isa(obj.grid,'ReceiverSpace1D') || ...
+                    isa(obj.grid,'ReceiverSpace2D')
+                error('GridFunction:NUndefinedForReceivers', ...
+                    'Receiver spaces have numPts, but no Cartesian grid size N.');
+            end
             value = obj.grid.N;
+        end
+
+        function value = get.numPts(obj)
+            value = obj.grid.numPts;
         end
 
         %%%%%%%%
@@ -91,7 +104,20 @@ classdef GridFunction < handle
 
         %%%%%%%%
         function h = plot(obj,varargin)
-            if obj.dim == 1
+            if isa(obj.grid,'ReceiverSpace1D')
+                h = plot(obj.grid.points,obj.values,'o',varargin{:});
+                xlabel('x');
+                ylabel(obj.formattedLabel());
+
+            elseif isa(obj.grid,'ReceiverSpace2D')
+                h = scatter(obj.grid.points(:,1),obj.grid.points(:,2), ...
+                    [],obj.values,'filled',varargin{:});
+                xlabel('x');
+                ylabel('y');
+                cb = colorbar;
+                cb.Label.String = obj.formattedLabel();
+
+            elseif obj.dim == 1
                 if obj.grid.N == 1
                     h = plot(obj.grid.x.pts,obj.values, ...
                         'o',varargin{:});
@@ -144,6 +170,19 @@ classdef GridFunction < handle
                     'Source and target GridFunctions must have the same dimension.');
             end
 
+            if isa(obj.grid,'ReceiverSpace1D') || ...
+                    isa(obj.grid,'ReceiverSpace2D') || ...
+                    isa(source.grid,'ReceiverSpace1D') || ...
+                    isa(source.grid,'ReceiverSpace2D')
+                if isequal(obj.grid,source.grid)
+                    obj.setValues(source.values);
+                    return;
+                end
+                error('GridFunction:ReceiverInterpolationUnsupported', ...
+                    ['Interpolation involving different receiver or ' ...
+                     'Cartesian spaces is not implemented yet.']);
+            end
+
             if obj.dim == 1
 
                 % Target coordinates
@@ -185,7 +224,15 @@ classdef GridFunction < handle
         %%%%%%%%
         function setValuesFromArray(obj,data)
 
-            if obj.dim == 1
+            if isa(obj.grid,'ReceiverSpace1D') || ...
+                    isa(obj.grid,'ReceiverSpace2D')
+                if ~isvector(data) || numel(data) ~= obj.numPts
+                    error('GridFunction:InvalidSize', ...
+                        'Receiver data must contain one value per receiver.');
+                end
+                obj.values = data(:);
+
+            elseif obj.dim == 1
                 if ~isvector(data) || numel(data) ~= obj.N
                     error('GridFunction:InvalidSize', ...
                         'Array must contain one value per grid point.');
@@ -206,7 +253,14 @@ classdef GridFunction < handle
         %%%%%%%%
         function setValuesFromFunction(obj,f)
 
-            if obj.dim == 1
+            if isa(obj.grid,'ReceiverSpace1D')
+                data = f(obj.grid.points);
+
+            elseif isa(obj.grid,'ReceiverSpace2D')
+                xy = obj.grid.points;
+                data = f(xy(:,1),xy(:,2));
+
+            elseif obj.dim == 1
                 x = obj.grid.x.pts;
 
                 data = f(x);
