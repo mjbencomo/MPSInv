@@ -23,7 +23,7 @@ classdef AcousticSolver2DStaggered < AcousticSolver
             arguments
                 computationalGrid (1,1) GridSpace2D
                 computationalTimes double {mustBeFinite}
-                outputGrid (1,1) GridSpace2D
+                outputGrid (1,1) GridSpace
                 outputTimes double {mustBeFinite}
                 medium (1,1) AcousticMedium2D
                 options.SpatialOrder (1,1) double ...
@@ -48,8 +48,23 @@ classdef AcousticSolver2DStaggered < AcousticSolver
                      'are required for the fourth-order stencil.']);
             end
 
-            if any(outputGrid.dom(:,1) < computationalGrid.dom(:,1)) || ...
-                    any(outputGrid.dom(:,2) > computationalGrid.dom(:,2))
+            if ~isa(outputGrid,'GridSpace2D') && ...
+                    ~isa(outputGrid,'ReceiverSpace2D')
+                error('AcousticSolver2DStaggered:InvalidOutputSpace', ...
+                    'Output space must be GridSpace2D or ReceiverSpace2D.');
+            end
+
+            if isa(outputGrid,'ReceiverSpace2D')
+                xy = outputGrid.points;
+                outside = any(xy(:,1) < computationalGrid.dom(1,1) | ...
+                    xy(:,1) > computationalGrid.dom(1,2) | ...
+                    xy(:,2) < computationalGrid.dom(2,1) | ...
+                    xy(:,2) > computationalGrid.dom(2,2));
+            else
+                outside = any(outputGrid.dom(:,1) < computationalGrid.dom(:,1)) || ...
+                    any(outputGrid.dom(:,2) > computationalGrid.dom(:,2));
+            end
+            if outside
                 error('AcousticSolver2DStaggered:OutputGridOutsideDomain', ...
                     ['Output points must lie within the computational ' ...
                      'spatial domain.']);
@@ -283,8 +298,14 @@ classdef AcousticSolver2DStaggered < AcousticSolver
                 interpolant = griddedInterpolant( ...
                     {sourceGrid.x.pts,sourceGrid.y.pts},data, ...
                     "linear",extrapolation);
-                [X,Y] = obj.outputGrid.mesh();
-                values = interpolant(X,Y);
+                if isa(obj.outputGrid,'ReceiverSpace2D')
+                    xy = obj.outputGrid.points;
+                    values = interpolant(xy(:,1),xy(:,2));
+                    values = values(:);
+                else
+                    [X,Y] = obj.outputGrid.mesh();
+                    values = interpolant(X,Y);
+                end
             end
 
             if any(~isfinite(values),'all')
@@ -318,12 +339,22 @@ classdef AcousticSolver2DStaggered < AcousticSolver
         end
 
         function validateVelocityOutputDomain(obj,velocityGrid,component)
-            if any(obj.outputGrid.dom(:,1) < velocityGrid.dom(:,1)) || ...
-                    any(obj.outputGrid.dom(:,2) > velocityGrid.dom(:,2))
+            if isa(obj.outputGrid,'ReceiverSpace2D')
+                xy = obj.outputGrid.points;
+                x = xy(:,1);
+                y = xy(:,2);
+            else
+                x = obj.outputGrid.x.pts;
+                y = obj.outputGrid.y.pts;
+            end
+            if any(x < velocityGrid.x.pts(1) | ...
+                    x > velocityGrid.x.pts(end)) || ...
+                    any(y < velocityGrid.y.pts(1) | ...
+                    y > velocityGrid.y.pts(end))
                 error('AcousticSolver2DStaggered:VelocityExtrapolationRequired', ...
-                    ['The output grid extends beyond the computational ' ...
-                     '%s grid. Use VelocityExtrapolation="linear" or ' ...
-                     'choose interior output points.'],component);
+                    ['Output points extend beyond the sampled %s-velocity ' ...
+                     'grid. Use VelocityExtrapolation="linear" or choose ' ...
+                     'interior output points.'],component);
             end
         end
 
