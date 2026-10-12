@@ -27,7 +27,7 @@ classdef AcousticSolver1D_PML < AcousticSolver
             arguments
                 computationalGrid (1,1) GridSpace1D
                 computationalTimes double {mustBeFinite}
-                outputGrid (1,1) GridSpace1D
+                outputGrid (1,1) GridSpace
                 outputTimes double {mustBeFinite}
                 medium (1,1) AcousticMedium1D
                 pml (1,1) PML1D
@@ -43,8 +43,22 @@ classdef AcousticSolver1D_PML < AcousticSolver
                 error('AcousticSolver1D_PML:PrimalGridRequired', ...
                     'The physical pressure grid must be uniform and primal.');
             end
-            if outputGrid.dom(1) < computationalGrid.dom(1) || ...
-                    outputGrid.dom(2) > computationalGrid.dom(2)
+            if ~isa(outputGrid,'GridSpace1D') && ...
+                    ~isa(outputGrid,'ReceiverSpace1D')
+                error('AcousticSolver1D_PML:InvalidOutputSpace', ...
+                    'Output space must be GridSpace1D or ReceiverSpace1D.');
+            end
+
+            if isa(outputGrid,'ReceiverSpace1D')
+                outputPoints = outputGrid.points;
+                outside = any(outputPoints < computationalGrid.dom(1) | ...
+                    outputPoints > computationalGrid.dom(2));
+            else
+                outputPoints = outputGrid.x.pts;
+                outside = outputGrid.dom(1) < computationalGrid.dom(1) || ...
+                    outputGrid.dom(2) > computationalGrid.dom(2);
+            end
+            if outside
                 error('AcousticSolver1D_PML:OutputGridOutsideDomain', ...
                     'Output points must lie in the physical domain.');
             end
@@ -100,10 +114,9 @@ classdef AcousticSolver1D_PML < AcousticSolver
             end
 
             dualPoints = obj.extendedDualGrid.x.pts;
-            outputPoints = outputGrid.x.pts;
             if obj.velocityExtrapolation == "none" && ...
-                    (outputPoints(1) < dualPoints(1) || ...
-                     outputPoints(end) > dualPoints(end))
+                    any(outputPoints < dualPoints(1) | ...
+                    outputPoints > dualPoints(end))
                 error('AcousticSolver1D_PML:VelocityExtrapolationRequired', ...
                     ['Use VelocityExtrapolation="linear" or choose ' ...
                      'output points inside the extended velocity grid.']);
@@ -321,7 +334,11 @@ classdef AcousticSolver1D_PML < AcousticSolver
 
         function values = interpolateSpace(obj,data,sourceGrid,isVelocity)
             sourcePoints = sourceGrid.x.pts;
-            outputPoints = obj.outputGrid.x.pts;
+            if isa(obj.outputGrid,'ReceiverSpace1D')
+                outputPoints = obj.outputGrid.points;
+            else
+                outputPoints = obj.outputGrid.x.pts;
+            end
             if isequal(sourceGrid,obj.outputGrid)
                 values = data;
             elseif isVelocity && obj.velocityExtrapolation == "linear"
