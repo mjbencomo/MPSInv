@@ -1,11 +1,9 @@
-% GridSpace represents a general spatial grid for a finite-difference problem.
-% Provides a common interface for spatial grids of different dimensions.
+% GridSpace represents a collection of points in physical space.
+% Cartesian grids and scattered receiver sets share dim and numPts;
+% spacing, coordinate grids, and mesh are specific to Cartesian grids.
 %
 % Properties:
 %      dim - spatial dimension
-%        N - array of number of grid points, for each dimension
-%        h - array of grid sizes, for each dimension
-%      dom - array of domains, for each dimension
 %   numPts - total number of grid points over all dimensions
 
 classdef (Abstract) GridSpace
@@ -14,18 +12,6 @@ classdef (Abstract) GridSpace
     end
 
     properties (Abstract, Dependent)
-        N
-        h
-        dom
-    end
-
-    properties (Dependent)
         numPts
-    end
-
-    methods
-        function value = get.numPts(obj)
-            value = prod(obj.N);
-        end
     end
 end

@@ -39,7 +39,7 @@ classdef (Abstract) GreenFunction < handle
             times = solverTimes(2:end);
             times(1) = 0;
             K = numel(times);
-            N = prod(solver.outputGrid.N);
+            N = solver.outputGrid.numPts;
 
             obj.component = component;
             obj.solver = solver;
@@ -59,7 +59,7 @@ classdef (Abstract) GreenFunction < handle
         end
 
         function value = get.numberOfOutputChannels(obj)
-            value = prod(obj.outputGrid.N);
+            value = obj.outputGrid.numPts;
         end
 
         function value = get.zeroLagIndex(obj)

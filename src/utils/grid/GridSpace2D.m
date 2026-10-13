@@ -22,6 +22,7 @@ classdef GridSpace2D < GridSpace
     end
 
     properties (Dependent)
+        numPts
         N
         h
         dom
@@ -31,6 +32,10 @@ classdef GridSpace2D < GridSpace
     end
 
     methods
+        function value = get.numPts(obj)
+            value = obj.x.N * obj.y.N;
+        end
+
         function obj = GridSpace2D(x,y)
             arguments
                 x (1,1) Grid1D

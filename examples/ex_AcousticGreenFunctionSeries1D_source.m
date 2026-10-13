@@ -15,15 +15,12 @@ computationalGrid = GridSpace1D( ...
     Grid1DUnifPrimal(domain,201));
 
 receiverLocations = [0.2,0.5,0.8];
-outputGrid = GridSpace1D( ...
-    Grid1DUnifPrimal( ...
-    [receiverLocations(1),receiverLocations(end)], ...
-    numel(receiverLocations)));
+outputGrid = ReceiverSpace1D(receiverLocations);
 
 medium = AcousticMedium1D.constant(KappaValue=1,BetaValue=1);
 pml = PML1D(WidthLeft=0.2,WidthRight=0.2);
 
-[~,~,~,cMax] = sampleMedium1D(computationalGrid,medium);
+[~,~,wspeed,cMax] = sampleMedium1D(computationalGrid,medium);
 T = 1;
 dtEstimate = 0.8*(6/7)*computationalGrid.h/cMax;
 K = ceil(T/dtEstimate)+1;
@@ -37,29 +34,33 @@ solver = AcousticSolver1D_PML( ...
 %% Define the input channels
 % The component order determines the input-channel order. Here channel 1 is
 % a pressure monopole and channel 2 is a first spatial derivative source.
-
+sourceLocations = [0.4;0.6];
 components = { ...
-    MultipoleComponent1D(0.4,0,TargetField="pressure"), ...
-    MultipoleComponent1D(0.6,1,TargetField="pressure")};
+    MultipoleComponent1D(sourceLocations(1),0,TargetField="pressure"), ...
+    MultipoleComponent1D(sourceLocations(2),1,TargetField="pressure")};
 
-series = AcousticGreenFunctionSeries1D( ...
+G_series = AcousticGreenFunctionSeries1D( ...
     components,solver,OutputField="pressure");
+
+%% Plotting source-receiver geometry
+plotAcqGeo(wspeed,sourceLocations,receiverLocations);
+title("Source-Receiver Locations")
 
 %% Compute and inspect the kernels
 % A scalar approximation order is applied to every component. A vector with
 % one entry per input channel may be supplied instead.
 
-series.compute(4);
+G_series.compute(4);
 
-fprintf('Kernel array size: %d-by-%d-by-%d\n',size(series.values))
-fprintf('Input channels: %d\n',series.numberOfInputChannels)
-fprintf('Output channels: %d\n',series.numberOfOutputChannels)
+fprintf('Kernel array size: %d-by-%d-by-%d\n',size(G_series.values))
+fprintf('Input channels: %d\n',G_series.numberOfInputChannels)
+fprintf('Output channels: %d\n',G_series.numberOfOutputChannels)
 
 figure
-tiledlayout(series.numberOfInputChannels,1)
-for m = 1:series.numberOfInputChannels
+tiledlayout(G_series.numberOfInputChannels,1)
+for m = 1:G_series.numberOfInputChannels
     nexttile
-    plot(series.lags,series.values(:,:,m),'LineWidth',1.1)
+    plot(G_series.lags,G_series.values(:,:,m),'LineWidth',1.1)
     xline(0,':k')
     xlabel('Time lag')
     ylabel('Pressure kernel')
@@ -72,14 +73,27 @@ end
 % Channel-block vectorization is used. If W has size K-by-M, then W(:)
 % stores all samples of input channel 1, followed by input channel 2.
 
-A = series.makeLinearOp();
+A = G_series.makeLinearOp();
 
-W = zeros(K,series.numberOfInputChannels);
+W = zeros(K,G_series.numberOfInputChannels);
 W(:,1) = exp(-((times(:)-0.25)/0.06).^2);
 W(:,2) = 0.4*exp(-((times(:)-0.55)/0.08).^2);
 
 d = A.fwd(W(:));
-D = reshape(d,K,series.numberOfOutputChannels);
+D = reshape(d,K,G_series.numberOfOutputChannels);
+
+Amat = A.matrixRep();
+
+figure
+imagesc(Amat)
+axis xy
+axis equal
+title('Convolution operator matrix')
+colorbar
+xlabel('column index')
+ylabel('row index')
+xlim([0,size(Amat,2)])
+ylim([0,size(Amat,1)])
 
 figure
 tiledlayout(2,1)
