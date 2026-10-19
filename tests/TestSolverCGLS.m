@@ -33,7 +33,7 @@ classdef TestSolverCGLS < matlab.unittest.TestCase
             b = M*xTrue;
 
             [x,info] = solver_CGLS(A,b,InitialGuess=x0, ...
-                TrueSolution=xTrue,Tolerance=1e-12,MaxIterations=3);
+                TrueSolution=xTrue,RelativeTolerance=1e-12,MaxIterations=3);
 
             testCase.verifyNumElements(info.trueErrorHistory,info.iterations+1);
             testCase.verifyEqual(info.trueErrorHistory(1),norm(x0-xTrue));
@@ -41,7 +41,7 @@ classdef TestSolverCGLS < matlab.unittest.TestCase
             testCase.verifyEqual(info.trueErrorHistory(end),info.trueErrorNorm);
             for k = 1:info.iterations
                 xk = solver_CGLS(A,b,InitialGuess=x0, ...
-                    Tolerance=1e-12,MaxIterations=k);
+                    RelativeTolerance=1e-12,MaxIterations=k);
                 testCase.verifyEqual( ...
                     info.trueErrorHistory(k+1),norm(xk-xTrue),'AbsTol',1e-14);
             end
@@ -53,7 +53,7 @@ classdef TestSolverCGLS < matlab.unittest.TestCase
             xTrue = [2-i;-1+3i];
 
             [x,info] = solver_CGLS(A,M*xTrue, ...
-                TrueSolution=xTrue,Tolerance=1e-11);
+                TrueSolution=xTrue,RelativeTolerance=1e-11);
 
             testCase.verifyTrue(isreal(info.trueErrorHistory));
             testCase.verifyEqual(info.trueErrorHistory(1),norm(xTrue));
@@ -81,7 +81,7 @@ classdef TestSolverCGLS < matlab.unittest.TestCase
             xTrue = ones(3,1);
 
             [x,info] = solver_CGLS(A,A.fwd(xTrue), ...
-                TrueSolution=xTrue,MaxIterations=1,Tolerance=1e-14);
+                TrueSolution=xTrue,MaxIterations=1,RelativeTolerance=1e-14);
 
             testCase.verifyEqual(info.flag,1);
             testCase.verifyNumElements(info.trueErrorHistory,2);
@@ -120,7 +120,7 @@ classdef TestSolverCGLS < matlab.unittest.TestCase
             expected = M\b;
             A = MatrixLinearOp(M);
 
-            [x,info] = solver_CGLS(A,b,Tolerance=1e-12);
+            [x,info] = solver_CGLS(A,b,RelativeTolerance=1e-12);
 
             testCase.verifyEqual(x,expected,'AbsTol',1e-11);
             testCase.verifyTrue(info.converged);
@@ -132,7 +132,7 @@ classdef TestSolverCGLS < matlab.unittest.TestCase
             A = MatrixLinearOp(M);
 
             x = solver_CGLS(A,M*xExact, ...
-                InitialGuess=[10;-4],Tolerance=1e-12);
+                InitialGuess=[10;-4],RelativeTolerance=1e-12);
 
             testCase.verifyEqual(x,xExact,'AbsTol',1e-11);
         end
@@ -142,7 +142,7 @@ classdef TestSolverCGLS < matlab.unittest.TestCase
             xExact = [2-i;-1+3i];
             A = MatrixLinearOp(M);
 
-            [x,info] = solver_CGLS(A,M*xExact,Tolerance=1e-11);
+            [x,info] = solver_CGLS(A,M*xExact,RelativeTolerance=1e-11);
 
             testCase.verifyEqual(x,xExact,'AbsTol',1e-10);
             testCase.verifyTrue(info.converged);
@@ -169,7 +169,7 @@ classdef TestSolverCGLS < matlab.unittest.TestCase
             b = [1;2;4];
             A = MatrixLinearOp(M);
 
-            [x,info] = solver_CGLS(A,b,Tolerance=1e-12);
+            [x,info] = solver_CGLS(A,b,RelativeTolerance=1e-12);
 
             testCase.verifyEqual(info.dataResidualHistory(1),norm(b));
             testCase.verifyEqual( ...
@@ -188,7 +188,7 @@ classdef TestSolverCGLS < matlab.unittest.TestCase
             b = [1;2;3;4];
 
             [~,info] = solver_CGLS(A,b, ...
-                Tolerance=1e-14,MaxIterations=1);
+                RelativeTolerance=1e-14,MaxIterations=1);
 
             testCase.verifyEqual(info.iterations,1);
             testCase.verifyFalse(info.converged);

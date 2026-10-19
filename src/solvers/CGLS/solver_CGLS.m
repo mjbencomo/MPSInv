@@ -13,8 +13,10 @@ function [x,info] = solver_CGLS(A,b,options)
 %                        A.dimDomain entries. The default [] disables
 %                        true-error tracking. This option does not affect
 %                        the iterates or the stopping criterion.
-%       Tolerance        Relative tolerance for the normal residual.
-%                        The default is 1e-6.
+%       RelativeTolerance Relative tolerance for the normal residual.
+%                         The default is 1e-6.
+%       AbsoluteTolerance Absolute tolerance for the normal residual.
+%                         The default is 0. Both tolerances may be zero.
 %       MaxIterations    Maximum number of CGLS iterations. The default is
 %                        A.dimDomain.
 %
@@ -36,7 +38,11 @@ function [x,info] = solver_CGLS(A,b,options)
 %
 %   Convergence occurs when
 %
-%       ||A'*(B-A*X_k)||_2 <= Tolerance*||A'*(B-A*X_0)||_2.
+%       ||A'*(B-A*X_k)||_2 <= max(AbsoluteTolerance, ...
+%                          RelativeTolerance*||A'*(B-A*X_0)||_2).
+%
+%   The same test is applied to the initial guess. The former Tolerance
+%   option is replaced by RelativeTolerance.
 %
 %   The implementation uses only A.fwd and A.adj. It does not form the
 %   matrix representation of A or the normal-equations matrix A'*A.
@@ -46,8 +52,10 @@ function [x,info] = solver_CGLS(A,b,options)
         b (:,1) {mustBeNumeric,mustBeFinite}
         options.InitialGuess {mustBeNumeric,mustBeFinite} = []
         options.TrueSolution {mustBeNumeric,mustBeFinite} = []
-        options.Tolerance (1,1) double ...
-            {mustBeReal,mustBeFinite,mustBePositive} = 1e-6
+        options.RelativeTolerance (1,1) double ...
+            {mustBeReal,mustBeFinite,mustBeNonnegative} = 1e-6
+        options.AbsoluteTolerance (1,1) double ...
+            {mustBeReal,mustBeFinite,mustBeNonnegative} = 0
         options.MaxIterations (1,1) double ...
             {mustBeInteger,mustBePositive} = A.dimDomain
     end
@@ -83,8 +91,9 @@ function [x,info] = solver_CGLS(A,b,options)
     p = s;
 
     sts = real(s'*s);
-    normalResidual = sqrt(sts);
-    stoppingThreshold = options.Tolerance*normalResidual;
+    normalResidual = norm(s);
+    stoppingThreshold = max(options.AbsoluteTolerance, ...
+        options.RelativeTolerance*normalResidual);
 
     dataResHist = zeros(maxit + 1,1);
     normalResHist = zeros(maxit + 1,1);
@@ -96,11 +105,11 @@ function [x,info] = solver_CGLS(A,b,options)
         trueErrHist(1) = norm(x - xTrue);
     end
 
-    if normalResidual == 0
+    if isfinite(normalResidual) && normalResidual <= stoppingThreshold
         if trackTrueError
             trueErrHist = trueErrHist(1);
         end
-        info = makeInfo(0,'Initial guess is a least-squares solution.', ...
+        info = makeInfo(0,'Initial normal residual satisfies the tolerance.', ...
             0,r,normalResidual,dataResHist(1),normalResHist(1), ...
             stoppingThreshold,trueErrHist);
         return
@@ -126,7 +135,7 @@ function [x,info] = solver_CGLS(A,b,options)
         s = A.adj(r);
 
         stsNew = real(s'*s);
-        normalResidual = sqrt(stsNew);
+        normalResidual = norm(s);
 
         iter = k;
         dataResHist(k + 1) = norm(r);
@@ -143,7 +152,7 @@ function [x,info] = solver_CGLS(A,b,options)
 
         if normalResidual <= stoppingThreshold
             flag = 0;
-            message = 'Relative normal residual satisfies the tolerance.';
+            message = 'Normal residual satisfies the relative/absolute tolerance.';
             break
         end
 
