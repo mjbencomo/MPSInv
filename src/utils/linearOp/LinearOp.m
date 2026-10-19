@@ -3,6 +3,8 @@ classdef (Abstract) LinearOp
     %
     % Subclasses implement the forward action, adjoint action, and matrix
     % representation with respect to the standard coordinate bases.
+    % adj(y) applies the Hermitian adjoint; adjoint() returns it as an
+    % operator. The default adjoint wrapper does not assemble a matrix.
 
     properties (SetAccess = protected)
         dimDomain (1,1) double
@@ -13,13 +15,18 @@ classdef (Abstract) LinearOp
         function obj = LinearOp(dimDomain,dimRange)
             arguments
                 dimDomain (1,1) double ...
-                    {mustBeInteger,mustBePositive}
+                    {mustBeInteger,mustBePositive,mustBeFinite}
                 dimRange (1,1) double ...
-                    {mustBeInteger,mustBePositive}
+                    {mustBeInteger,mustBePositive,mustBeFinite}
             end
 
             obj.dimDomain = dimDomain;
             obj.dimRange = dimRange;
+        end
+
+        function adjointOp = adjoint(obj)
+            % Return A* as an operator, with exchanged domain and range.
+            adjointOp = AjointOfLinearOp(obj);
         end
     end
 
