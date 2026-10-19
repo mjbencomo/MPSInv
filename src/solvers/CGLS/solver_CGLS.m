@@ -9,8 +9,14 @@ function [x,info] = solver_CGLS(A,b,options)
 %   X = SOLVER_CGLS(A,B,Name=Value) specifies one or more options:
 %
 %       InitialGuess     Initial estimate. The default is the zero vector.
-%       Tolerance        Relative tolerance for the normal residual.
-%                        The default is 1e-6.
+%       TrueSolution     Known reference solution, a column vector with
+%                        A.dimDomain entries. The default [] disables
+%                        true-error tracking. This option does not affect
+%                        the iterates or the stopping criterion.
+%       RelativeTolerance Relative tolerance for the normal residual.
+%                         The default is 1e-6.
+%       AbsoluteTolerance Absolute tolerance for the normal residual.
+%                         The default is 0. Both tolerances may be zero.
 %       MaxIterations    Maximum number of CGLS iterations. The default is
 %                        A.dimDomain.
 %
@@ -27,10 +33,16 @@ function [x,info] = solver_CGLS(A,b,options)
 %       normalResidualNorm      final ||A'*(B-A*X)||_2
 %       dataResidualHistory     data-residual norms at X0,...,X_k
 %       normalResidualHistory   normal-residual norms at X0,...,X_k
+%       trueErrorNorm           final ||X-X_true||_2, or [] if not supplied
+%       trueErrorHistory        ||X_j-X_true||_2 at X0,...,X_k, or []
 %
 %   Convergence occurs when
 %
-%       ||A'*(B-A*X_k)||_2 <= Tolerance*||A'*(B-A*X_0)||_2.
+%       ||A'*(B-A*X_k)||_2 <= max(AbsoluteTolerance, ...
+%                          RelativeTolerance*||A'*(B-A*X_0)||_2).
+%
+%   The same test is applied to the initial guess. The former Tolerance
+%   option is replaced by RelativeTolerance.
 %
 %   The implementation uses only A.fwd and A.adj. It does not form the
 %   matrix representation of A or the normal-equations matrix A'*A.
@@ -39,8 +51,11 @@ function [x,info] = solver_CGLS(A,b,options)
         A (1,1) LinearOp
         b (:,1) {mustBeNumeric,mustBeFinite}
         options.InitialGuess {mustBeNumeric,mustBeFinite} = []
-        options.Tolerance (1,1) double ...
-            {mustBeReal,mustBeFinite,mustBePositive} = 1e-6
+        options.TrueSolution {mustBeNumeric,mustBeFinite} = []
+        options.RelativeTolerance (1,1) double ...
+            {mustBeReal,mustBeFinite,mustBeNonnegative} = 1e-6
+        options.AbsoluteTolerance (1,1) double ...
+            {mustBeReal,mustBeFinite,mustBeNonnegative} = 0
         options.MaxIterations (1,1) double ...
             {mustBeInteger,mustBePositive} = A.dimDomain
     end
@@ -61,6 +76,14 @@ function [x,info] = solver_CGLS(A,b,options)
         end
     end
 
+    xTrue = options.TrueSolution;
+    trackTrueError = ~isempty(xTrue);
+    if trackTrueError && (~iscolumn(xTrue) || numel(xTrue) ~= A.dimDomain)
+        error('solver_CGLS:InvalidTrueSolution', ...
+            ['TrueSolution must be a column vector with ' ...
+             'A.dimDomain entries.']);
+    end
+
     maxit = options.MaxIterations;
 
     r = b - A.fwd(x);
@@ -68,18 +91,27 @@ function [x,info] = solver_CGLS(A,b,options)
     p = s;
 
     sts = real(s'*s);
-    normalResidual = sqrt(sts);
-    stoppingThreshold = options.Tolerance*normalResidual;
+    normalResidual = norm(s);
+    stoppingThreshold = max(options.AbsoluteTolerance, ...
+        options.RelativeTolerance*normalResidual);
 
     dataResHist = zeros(maxit + 1,1);
     normalResHist = zeros(maxit + 1,1);
     dataResHist(1) = norm(r);
     normalResHist(1) = normalResidual;
+    trueErrHist = [];
+    if trackTrueError
+        trueErrHist = zeros(maxit + 1,1);
+        trueErrHist(1) = norm(x - xTrue);
+    end
 
-    if normalResidual == 0
-        info = makeInfo(0,'Initial guess is a least-squares solution.', ...
+    if isfinite(normalResidual) && normalResidual <= stoppingThreshold
+        if trackTrueError
+            trueErrHist = trueErrHist(1);
+        end
+        info = makeInfo(0,'Initial normal residual satisfies the tolerance.', ...
             0,r,normalResidual,dataResHist(1),normalResHist(1), ...
-            stoppingThreshold);
+            stoppingThreshold,trueErrHist);
         return
     end
 
@@ -103,11 +135,14 @@ function [x,info] = solver_CGLS(A,b,options)
         s = A.adj(r);
 
         stsNew = real(s'*s);
-        normalResidual = sqrt(stsNew);
+        normalResidual = norm(s);
 
         iter = k;
         dataResHist(k + 1) = norm(r);
         normalResHist(k + 1) = normalResidual;
+        if trackTrueError
+            trueErrHist(k + 1) = norm(x - xTrue);
+        end
 
         if ~isfinite(normalResidual)
             flag = 2;
@@ -117,7 +152,7 @@ function [x,info] = solver_CGLS(A,b,options)
 
         if normalResidual <= stoppingThreshold
             flag = 0;
-            message = 'Relative normal residual satisfies the tolerance.';
+            message = 'Normal residual satisfies the relative/absolute tolerance.';
             break
         end
 
@@ -128,12 +163,19 @@ function [x,info] = solver_CGLS(A,b,options)
 
     dataResHist = dataResHist(1:iter + 1);
     normalResHist = normalResHist(1:iter + 1);
+    if trackTrueError
+        trueErrHist = trueErrHist(1:iter + 1);
+    end
     info = makeInfo(flag,message,iter,r,normalResidual, ...
-        dataResHist,normalResHist,stoppingThreshold);
+        dataResHist,normalResHist,stoppingThreshold,trueErrHist);
 end
 
 function info = makeInfo(flag,message,iterations,r,normalResidual, ...
-        dataResHist,normalResHist,stoppingThreshold)
+        dataResHist,normalResHist,stoppingThreshold,trueErrHist)
+    trueErrorNorm = [];
+    if ~isempty(trueErrHist)
+        trueErrorNorm = trueErrHist(end);
+    end
     info = struct( ...
         'flag',flag, ...
         'converged',flag == 0, ...
@@ -143,5 +185,7 @@ function info = makeInfo(flag,message,iterations,r,normalResidual, ...
         'normalResidualNorm',normalResidual, ...
         'dataResidualHistory',dataResHist, ...
         'normalResidualHistory',normalResHist, ...
+        'trueErrorNorm',trueErrorNorm, ...
+        'trueErrorHistory',trueErrHist, ...
         'stoppingThreshold',stoppingThreshold);
 end
