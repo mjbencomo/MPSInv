@@ -9,6 +9,10 @@ function [x,info] = solver_CGLS(A,b,options)
 %   X = SOLVER_CGLS(A,B,Name=Value) specifies one or more options:
 %
 %       InitialGuess     Initial estimate. The default is the zero vector.
+%       TrueSolution     Known reference solution, a column vector with
+%                        A.dimDomain entries. The default [] disables
+%                        true-error tracking. This option does not affect
+%                        the iterates or the stopping criterion.
 %       Tolerance        Relative tolerance for the normal residual.
 %                        The default is 1e-6.
 %       MaxIterations    Maximum number of CGLS iterations. The default is
@@ -27,6 +31,8 @@ function [x,info] = solver_CGLS(A,b,options)
 %       normalResidualNorm      final ||A'*(B-A*X)||_2
 %       dataResidualHistory     data-residual norms at X0,...,X_k
 %       normalResidualHistory   normal-residual norms at X0,...,X_k
+%       trueErrorNorm           final ||X-X_true||_2, or [] if not supplied
+%       trueErrorHistory        ||X_j-X_true||_2 at X0,...,X_k, or []
 %
 %   Convergence occurs when
 %
@@ -39,6 +45,7 @@ function [x,info] = solver_CGLS(A,b,options)
         A (1,1) LinearOp
         b (:,1) {mustBeNumeric,mustBeFinite}
         options.InitialGuess {mustBeNumeric,mustBeFinite} = []
+        options.TrueSolution {mustBeNumeric,mustBeFinite} = []
         options.Tolerance (1,1) double ...
             {mustBeReal,mustBeFinite,mustBePositive} = 1e-6
         options.MaxIterations (1,1) double ...
@@ -61,6 +68,14 @@ function [x,info] = solver_CGLS(A,b,options)
         end
     end
 
+    xTrue = options.TrueSolution;
+    trackTrueError = ~isempty(xTrue);
+    if trackTrueError && (~iscolumn(xTrue) || numel(xTrue) ~= A.dimDomain)
+        error('solver_CGLS:InvalidTrueSolution', ...
+            ['TrueSolution must be a column vector with ' ...
+             'A.dimDomain entries.']);
+    end
+
     maxit = options.MaxIterations;
 
     r = b - A.fwd(x);
@@ -75,11 +90,19 @@ function [x,info] = solver_CGLS(A,b,options)
     normalResHist = zeros(maxit + 1,1);
     dataResHist(1) = norm(r);
     normalResHist(1) = normalResidual;
+    trueErrHist = [];
+    if trackTrueError
+        trueErrHist = zeros(maxit + 1,1);
+        trueErrHist(1) = norm(x - xTrue);
+    end
 
     if normalResidual == 0
+        if trackTrueError
+            trueErrHist = trueErrHist(1);
+        end
         info = makeInfo(0,'Initial guess is a least-squares solution.', ...
             0,r,normalResidual,dataResHist(1),normalResHist(1), ...
-            stoppingThreshold);
+            stoppingThreshold,trueErrHist);
         return
     end
 
@@ -108,6 +131,9 @@ function [x,info] = solver_CGLS(A,b,options)
         iter = k;
         dataResHist(k + 1) = norm(r);
         normalResHist(k + 1) = normalResidual;
+        if trackTrueError
+            trueErrHist(k + 1) = norm(x - xTrue);
+        end
 
         if ~isfinite(normalResidual)
             flag = 2;
@@ -128,12 +154,19 @@ function [x,info] = solver_CGLS(A,b,options)
 
     dataResHist = dataResHist(1:iter + 1);
     normalResHist = normalResHist(1:iter + 1);
+    if trackTrueError
+        trueErrHist = trueErrHist(1:iter + 1);
+    end
     info = makeInfo(flag,message,iter,r,normalResidual, ...
-        dataResHist,normalResHist,stoppingThreshold);
+        dataResHist,normalResHist,stoppingThreshold,trueErrHist);
 end
 
 function info = makeInfo(flag,message,iterations,r,normalResidual, ...
-        dataResHist,normalResHist,stoppingThreshold)
+        dataResHist,normalResHist,stoppingThreshold,trueErrHist)
+    trueErrorNorm = [];
+    if ~isempty(trueErrHist)
+        trueErrorNorm = trueErrHist(end);
+    end
     info = struct( ...
         'flag',flag, ...
         'converged',flag == 0, ...
@@ -143,5 +176,7 @@ function info = makeInfo(flag,message,iterations,r,normalResidual, ...
         'normalResidualNorm',normalResidual, ...
         'dataResidualHistory',dataResHist, ...
         'normalResidualHistory',normalResHist, ...
+        'trueErrorNorm',trueErrorNorm, ...
+        'trueErrorHistory',trueErrHist, ...
         'stoppingThreshold',stoppingThreshold);
 end
