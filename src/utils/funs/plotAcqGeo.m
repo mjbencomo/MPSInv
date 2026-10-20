@@ -1,115 +1,98 @@
-function h = plotAcqGeo(gridFun, source_mps, receivers_gsp, options)
-%PLOTACQGEO Plot grid function background and acquisition geometry.
-%   h = plotAcqGeo(gridFun, source_mps, receivers_gsp)
-%   h = plotAcqGeo(..., Parent=ax)
+function h = plotAcqGeo(gridFun,sourcePoints,receiverPoints,options)
+%PLOTACQGEO Plot a Cartesian field and source/receiver locations.
+%   h = plotAcqGeo(gridFun,sourceLocations,receiverLocations)
+%   h = plotAcqGeo(...,Parent=ax)
 %
-%   h is a struct with fields:
-%     - background : handle to background plot (line or image)
-%     - src_rcv    : handle to source/receiver plot (line object)
+% In 1D, sourcePoints and receiverPoints are numeric vectors. In 2D,
+% they are numeric M-by-2 matrices with paired [x,y] rows.
+% The background GridFunction must be defined on a Cartesian grid.
+%
+% h.background is the background line or image; h.src_rcv contains the
+% source and receiver line handles, in that order.
 
 arguments
     gridFun (1,1) GridFunction
-    source_mps
-    receivers_gsp (1,1) GridSpace
+    sourcePoints
+    receiverPoints
     options.Parent = []
 end
 
-h = struct();
+if ~isa(gridFun.grid,'GridSpace1D') && ...
+        ~isa(gridFun.grid,'GridSpace2D')
+    error('plotAcqGeo:InvalidBackground', ...
+        'The background GridFunction must have a Cartesian grid space.');
+end
 
-% Create or validate axis
+dim = gridFun.dim;
+sourceLocations = validateLocations( ...
+    sourcePoints,dim,'plotAcqGeo:InvalidSource');
+receiverLocations = validateLocations( ...
+    receiverPoints,dim,'plotAcqGeo:InvalidReceivers');
+
 if isempty(options.Parent)
     ax = axes(figure);
 elseif isgraphics(options.Parent,'axes')
     ax = options.Parent;
 else
-    error('plotAcqGeo:InvalidParent', 'Parent must be a valid axes object.');
+    error('plotAcqGeo:InvalidParent', ...
+        'Parent must be a valid axes object.');
 end
-hold(ax,'on')
 
-switch gridFun.dim
+h = struct();
+hold(ax,'on');
+switch dim
     case 1
-        % Validate types
-        if ~isa(source_mps,'MultipoleSrcTerm1D') && ~isa(source_mps,'MultipoleSrcSeries1D')
-            error('plotAcqGeo:InvalidSource', ...
-                'Source must be MultipoleTerm1D or MultipoleSeries1D for 1D.');
-        end
-        if ~isa(receivers_gsp,'GridSpace1D')
-            error('plotAcqGeo:InvalidReceivers', ...
-                'Receivers must be a GridSpace1D for 1D plotting.');
-        end
-
-        % Source locations (column vector)
-        if isa(source_mps,'MultipoleSrcTerm1D')
-            src_locX = source_mps.location;
-        else
-            src_locX = source_mps.locations;
-        end
-        src_locX = src_locX(:);
-
-        % Receiver locations via mesh()
-        rcv_locX = receivers_gsp.mesh();
-        rcv_locX = rcv_locX(:);
-
-        % Plot background (left axis)
         yyaxis(ax,'left');
-        h.background = plot(ax, gridFun.grid.x.pts, gridFun.values(:), '-k');
-        ylabel(ax, gridFun.formattedLabel());
+        h.background = plot(ax,gridFun.grid.x.pts,gridFun.values(:),'-k');
+        ylabel(ax,gridFun.formattedLabel());
         ax.YAxis(1).Color = h.background.Color;
 
-        % Plot sources and receivers on right axis (y=0)
         yyaxis(ax,'right');
-        h.src_rcv = plot(ax, src_locX, zeros(size(src_locX)), 'xr', ...
-                             rcv_locX, zeros(size(rcv_locX)), 'ob');
+        h.src_rcv = [ ...
+            line(ax,'XData',sourceLocations, ...
+                'YData',zeros(size(sourceLocations)), ...
+                'LineStyle','none','Marker','x','Color','r'), ...
+            line(ax,'XData',receiverLocations, ...
+                'YData',zeros(size(receiverLocations)), ...
+                'LineStyle','none','Marker','o','Color','b')];
         yticks(ax,[]);
         ax.YAxis(2).Color = "k";
         xlabel(ax,'x');
 
     case 2
-        % Validate types
-        if ~isa(source_mps,'MultipoleSrcTerm2D') && ~isa(source_mps,'MultipoleSrcSeries2D')
-            error('plotAcqGeo:InvalidSource', ...
-                'Source must be MultipoleTerm2D or MultipoleSeries2D for 2D.');
-        end
-        if ~isa(receivers_gsp,'GridSpace2D')
-            error('plotAcqGeo:InvalidReceivers', ...
-                'Receivers must be a GridSpace2D for 2D plotting.');
-        end
-
-        % Source locations (Nx2)
-        if isa(source_mps,'MultipoleSrcTerm2D')
-            source_loc = source_mps.location;
-        else
-            source_loc = source_mps.locations;
-        end
-        if isempty(source_loc)
-            src_locX = zeros(0,1); src_locY = zeros(0,1);
-        else
-            src_locX = source_loc(:,1);
-            src_locY = source_loc(:,2);
-        end
-
-        % Receiver locations via mesh()
-        [rcv_locX, rcv_locY] = receivers_gsp.mesh();
-        % GridSpace2D.mesh returns ndgrid(x.pts,y.pts) so rcv_locX,rcv_locY
-        % have shape [Nx,Ny]. Flatten for plotting markers.
-        rcv_locX = rcv_locX(:);
-        rcv_locY = rcv_locY(:);
-
-        % Plot background image
-        h.background = imagesc(ax, gridFun.grid.x.pts, gridFun.grid.y.pts, gridFun.values.');
+        h.background = imagesc(ax,gridFun.grid.x.pts, ...
+            gridFun.grid.y.pts,gridFun.values.');
         axis(ax,'xy');
         xlabel(ax,'x');
         ylabel(ax,'y');
         cb = colorbar(ax);
         cb.Label.String = gridFun.formattedLabel();
 
-        % Overlay sources and receivers
-        h.src_rcv = plot(ax, src_locX, src_locY, 'xr', rcv_locX, rcv_locY, 'ob');
-        set(h.src_rcv, 'MarkerSize', 6);
-
-    otherwise
-        error('plotAcqGeo:InvalidDimension', 'Only 1D and 2D grids are supported.');
+        h.src_rcv = [ ...
+            line(ax,'XData',sourceLocations(:,1), ...
+                'YData',sourceLocations(:,2), ...
+                'LineStyle','none','Marker','x','Color','r'), ...
+            line(ax,'XData',receiverLocations(:,1), ...
+                'YData',receiverLocations(:,2), ...
+                'LineStyle','none','Marker','o','Color','b')];
+        set(h.src_rcv,'MarkerSize',6);
+end
+hold(ax,'off');
 end
 
-hold(ax,'off')
+function locations = validateLocations(input,dim,errorId)
+    if ~isnumeric(input) || ~isreal(input) || any(~isfinite(input),'all')
+        error(errorId,'Locations must contain finite real numeric values.');
+    end
+
+    if isempty(input)
+        locations = zeros(0,dim);
+    elseif dim == 1 && isvector(input)
+        locations = input(:);
+    elseif dim == 2 && ismatrix(input) && size(input,2) == 2
+        locations = input;
+    else
+        error(errorId, ...
+            '1D locations must be a vector; 2D locations must be M-by-2.');
+    end
 end

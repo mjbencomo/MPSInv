@@ -18,6 +18,7 @@ classdef GridFunctionTimeSeries < handle
 
     properties (Dependent)
         N
+        numPts
         Nt
         dim
     end
@@ -61,7 +62,10 @@ classdef GridFunctionTimeSeries < handle
             obj.timeLabel = options.TimeLabel;
             obj.timeUnits = options.TimeUnits;
 
-            if grid.dim == 1
+            if isa(grid,'ReceiverSpace1D') || isa(grid,'ReceiverSpace2D')
+                obj.values = zeros(grid.numPts,numel(times));
+
+            elseif grid.dim == 1
                 obj.values = zeros(grid.N,numel(times));
 
             elseif grid.dim == 2
@@ -97,6 +101,15 @@ classdef GridFunctionTimeSeries < handle
                 if isequal(data.grid,obj.grid)
                     data = data.values;
                 else
+                    if isa(obj.grid,'ReceiverSpace1D') || ...
+                            isa(obj.grid,'ReceiverSpace2D') || ...
+                            isa(data.grid,'ReceiverSpace1D') || ...
+                            isa(data.grid,'ReceiverSpace2D')
+                        error( ...
+                            'GridFunctionTimeSeries:ReceiverInterpolationUnsupported', ...
+                            ['Interpolation onto or from a different ' ...
+                             'receiver space is not implemented yet.']);
+                    end
                     target = GridFunction(obj.grid);
                     target.interpolateFrom(data);
                     data = target.values;
@@ -107,7 +120,15 @@ classdef GridFunctionTimeSeries < handle
                     'Snapshot data must be a numeric array or GridFunction.');
             end
 
-            if obj.dim == 1
+            if isa(obj.grid,'ReceiverSpace1D') || ...
+                    isa(obj.grid,'ReceiverSpace2D')
+                if ~isvector(data) || numel(data) ~= obj.numPts
+                    error('GridFunctionTimeSeries:InvalidSize', ...
+                        'A receiver snapshot needs one value per receiver.');
+                end
+                obj.values(:,timeIndex) = data(:);
+
+            elseif obj.dim == 1
                 if ~isvector(data) || numel(data) ~= obj.N
                     error('GridFunctionTimeSeries:InvalidSize', ...
                         'A 1D snapshot must contain one value per grid point.');
@@ -139,7 +160,10 @@ classdef GridFunctionTimeSeries < handle
                 Label=obj.label, ...
                 Units=obj.units);
 
-            if obj.dim == 1
+            if isa(obj.grid,'ReceiverSpace1D') || ...
+                    isa(obj.grid,'ReceiverSpace2D')
+                u.setValues(obj.values(:,timeIndex));
+            elseif obj.dim == 1
                 u.setValues(obj.values(:,timeIndex));
             else
                 u.setValues(obj.values(:,:,timeIndex));
@@ -163,6 +187,12 @@ classdef GridFunctionTimeSeries < handle
                     {mustBeNonnegative,mustBeFinite} = 0.05
                 options.Parent = []
                 options.relLimFactor (1,1) double {mustBePositive} = 1
+            end
+
+            if isa(obj.grid,'ReceiverSpace1D') || ...
+                    isa(obj.grid,'ReceiverSpace2D')
+                error('GridFunctionTimeSeries:ReceiverAnimationUnsupported', ...
+                    'Animation of receiver snapshots is not implemented yet.');
             end
 
             % Extracting figure axis
@@ -253,6 +283,12 @@ classdef GridFunctionTimeSeries < handle
                     {mustBePositive} = 1
                 options.NumContours (1,1) double ...
                     {mustBeInteger,mustBePositive} = 12
+            end
+
+            if isa(obj.grid,'ReceiverSpace1D') || ...
+                    isa(obj.grid,'ReceiverSpace2D')
+                error('GridFunctionTimeSeries:ReceiverAnimationUnsupported', ...
+                    'Animation of receiver snapshots is not implemented yet.');
             end
 
             % Create or validate figure axis
@@ -404,7 +440,23 @@ classdef GridFunctionTimeSeries < handle
                 "gridFun", "cmap_BWR.mat");
             data = load(matFile);
       
-            if obj.dim == 1
+            if isa(obj.grid,'ReceiverSpace1D') || ...
+                    isa(obj.grid,'ReceiverSpace2D')
+                if obj.numPts == 1
+                    h = plot(ax,obj.times,obj.values(1,:));
+                    xlabel(ax,obj.timeLabel+" ("+obj.timeUnits+")");
+                    ylabel(ax,obj.formattedLabel());
+                else
+                    h = imagesc(ax,1:obj.numPts,obj.times,obj.values.');
+                    xlabel(ax,"Receiver Index");
+                    ylabel(ax,obj.timeLabel+" ("+obj.timeUnits+")");
+                    cb = colorbar(ax);
+                    colormap(ax,data.cmap);
+                    cb.Label.String = obj.formattedLabel();
+                    clim(ax,obj.expandedLimits(obj.values));
+                end
+
+            elseif obj.dim == 1
                 if obj.N == 1
                     h = plot(ax,obj.times,obj.values(1,:));
                     xlabel(ax,obj.timeLabel+" ("+obj.timeUnits+")");
@@ -474,7 +526,16 @@ classdef GridFunctionTimeSeries < handle
 
         %%%%%%%%
         function value = get.N(obj)
+            if isa(obj.grid,'ReceiverSpace1D') || ...
+                    isa(obj.grid,'ReceiverSpace2D')
+                error('GridFunctionTimeSeries:NUndefinedForReceivers', ...
+                    'Receiver spaces have numPts, but no Cartesian grid size N.');
+            end
             value = obj.grid.N;
+        end
+
+        function value = get.numPts(obj)
+            value = obj.grid.numPts;
         end
 
         %%%%%%%%

@@ -21,7 +21,7 @@ classdef AcousticSolver1DStaggered < AcousticSolver
             arguments
                 computationalGrid (1,1) GridSpace1D
                 computationalTimes double {mustBeFinite}
-                outputGrid (1,1) GridSpace1D
+                outputGrid (1,1) GridSpace
                 outputTimes double {mustBeFinite}
                 medium (1,1) AcousticMedium1D
                 options.SpatialOrder (1,1) double ...
@@ -43,8 +43,22 @@ classdef AcousticSolver1DStaggered < AcousticSolver
                      'the fourth-order staggered stencil.']);
             end
 
-            if outputGrid.dom(1) < computationalGrid.dom(1) || ...
-                    outputGrid.dom(2) > computationalGrid.dom(2)
+            if ~isa(outputGrid,'GridSpace1D') && ...
+                    ~isa(outputGrid,'ReceiverSpace1D')
+                error('AcousticSolver1DStaggered:InvalidOutputSpace', ...
+                    'Output space must be GridSpace1D or ReceiverSpace1D.');
+            end
+
+            if isa(outputGrid,'ReceiverSpace1D')
+                outputPoints = outputGrid.points;
+                outside = any(outputPoints < computationalGrid.dom(1) | ...
+                    outputPoints > computationalGrid.dom(2));
+            else
+                outputPoints = outputGrid.x.pts;
+                outside = outputGrid.dom(1) < computationalGrid.dom(1) || ...
+                    outputGrid.dom(2) > computationalGrid.dom(2);
+            end
+            if outside
                 error('AcousticSolver1DStaggered:OutputGridOutsideDomain', ...
                     ['Output points must lie within the computational ' ...
                      'spatial domain.']);
@@ -69,10 +83,9 @@ classdef AcousticSolver1DStaggered < AcousticSolver
             end
 
             dualPoints = obj.B.grid.x.pts;
-            outputPoints = outputGrid.x.pts;
             if obj.velocityExtrapolation == "none" && ...
-                    (outputPoints(1) < dualPoints(1) || ...
-                     outputPoints(end) > dualPoints(end))
+                    any(outputPoints < dualPoints(1) | ...
+                    outputPoints > dualPoints(end))
                 error('AcousticSolver1DStaggered:VelocityExtrapolationRequired', ...
                     ['The output grid extends beyond the computational ' ...
                      'velocity grid. Use VelocityExtrapolation="linear" ' ...
@@ -235,7 +248,11 @@ classdef AcousticSolver1DStaggered < AcousticSolver
 
         function values = interpolateSpace(obj,data,sourceGrid,isVelocity)
             sourcePoints = sourceGrid.x.pts;
-            outputPoints = obj.outputGrid.x.pts;
+            if isa(obj.outputGrid,'ReceiverSpace1D')
+                outputPoints = obj.outputGrid.points;
+            else
+                outputPoints = obj.outputGrid.x.pts;
+            end
 
             if isequal(sourceGrid,obj.outputGrid)
                 values = data;

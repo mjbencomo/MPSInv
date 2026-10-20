@@ -71,7 +71,7 @@ classdef ConvMultiOp < LinearOp
             end
 
             Y = reshape(y,obj.N_time,obj.N_output);
-            X = obj.scale*corrMulti(adjointKernels,Y); %MB: Need to implement cross correlation
+            X = obj.scale*corrMulti(obj.kernels,Y);
             x = X(:);
         end
 
