@@ -1,33 +1,38 @@
 classdef (Abstract) InvLinearOp < LinearOp
-    % InvLinearOp is an invertible finite-dimensional linear operator.
+    % Invertible finite-dimensional operator with inverse actions.
     %
-    % Since an invertible operator maps a vector space onto itself, its
-    % domain and range must have the same dimension.
+    % Subclasses implement fwd, adj, matrixRep, inv, and invAdj.
+    %   inv(b)    solves A*x = b.
+    %   invAdj(b) solves A'*x = b (Hermitian adjoint).
     %
-    % Subclasses must implement:
-    %   fwd(obj,x)       - apply the operator
-    %   adj(obj,y)       - apply its adjoint
-    %   matrixRep(obj)   - return its matrix representation
-    %   inverse(obj)     - return an operator representing its inverse
+    % inverse() and adjoint() return InvLinearOp wrappers without
+    % constructing matrices or performing solves at wrapper creation.
+    % Domain and range have equal dimension but may represent different
+    % coordinates. These are inverse actions, not pseudoinverse actions.
 
     methods
         function obj = InvLinearOp(dim)
             arguments
                 dim (1,1) double ...
-                    {mustBeInteger,mustBePositive}
+                    {mustBeInteger,mustBePositive,mustBeFinite}
             end
-
             obj@LinearOp(dim,dim);
+        end
+
+        function inverseOp = inverse(obj)
+            inverseOp = InverseOfLinearOp(obj);
+        end
+
+        function adjointOp = adjoint(obj)
+            adjointOp = AdointInvOfLinearOp(obj);
         end
     end
 
     methods (Abstract)
-        inverseOp = inverse(obj)
-        % Return a LinearOp representing the inverse of this operator.
-        %
-        % The returned operator should satisfy, up to numerical error,
-        %
-        %   inverseOp.fwd(obj.fwd(x)) = x
-        %   obj.fwd(inverseOp.fwd(x)) = x
+        x = inv(obj,b)
+        % Apply A^(-1). b lies in A's range; x lies in A's domain.
+
+        x = invAdj(obj,b)
+        % Apply (A')^(-1). b lies in A's domain; x lies in A's range.
     end
 end

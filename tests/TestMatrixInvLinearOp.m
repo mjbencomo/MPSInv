@@ -22,12 +22,12 @@ classdef TestMatrixInvLinearOp < matlab.unittest.TestCase
             testCase.verifyEqual(op.adj(y),A'*y);
         end
 
-        function inverseReturnsMatrixInvLinearOp(testCase)
+        function inverseReturnsInverseOfLinearOp(testCase)
             op = MatrixInvLinearOp([3,1;1,2]);
 
             inverseOp = op.inverse();
 
-            testCase.verifyClass(inverseOp,'MatrixInvLinearOp');
+            testCase.verifyClass(inverseOp,'InverseOfLinearOp');
             testCase.verifyEqual(inverseOp.dimDomain,op.dimRange);
             testCase.verifyEqual(inverseOp.dimRange,op.dimDomain);
         end

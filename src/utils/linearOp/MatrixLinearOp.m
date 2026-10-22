@@ -8,6 +8,9 @@ classdef MatrixLinearOp < LinearOp
     %   y = A*x
     %
     % The adjoint operator is represented by the conjugate transpose A'.
+    % adjoint() is inherited from LinearOp and returns an operator wrapper.
+    % Rectangular and singular matrices are permitted; inverse actions
+    % belong to MatrixInvLinearOp.
 
     properties (SetAccess = private)
         matrix (:,:) double
