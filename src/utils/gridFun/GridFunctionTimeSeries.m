@@ -78,6 +78,67 @@ classdef GridFunctionTimeSeries < handle
         end
 
         %%%%%%%%
+        function setValues(obj,data)
+            % Set values at every spatial point and stored output time.
+            %
+            %   U.setValues(data)
+            %   U.setValues(@(x,t) f(x,t))
+            %   U.setValues(@(x,y,t) f(x,y,t))
+            %
+            % Numeric arrays must have size [Nx,Nt] for 1D grids,
+            % [Nx,Ny,Nt] for 2D grids, or [numPts,Nt] for receiver spaces.
+            % Singleton dimensions must retain their positions; MATLAB
+            % automatically omits trailing singleton dimensions.
+            %
+            % Functions receive all spatial coordinates and one scalar time
+            % per call. Use elementwise operations on the coordinates and
+            % return one numeric snapshot matching setSnapshot's rules.
+            % Receiver coordinates follow their stored receiver order.
+            % Values are replaced only after every snapshot is validated.
+
+            arguments
+                obj
+                data
+            end
+
+            if isnumeric(data)
+                if ~isequal(size(data),size(obj.values))
+                    error('GridFunctionTimeSeries:InvalidSize', ...
+                        ['Array size must match the spatial grid and ' ...
+                         'number of stored times.']);
+                end
+                obj.values = data;
+                return;
+            elseif ~isa(data,'function_handle')
+                error('GridFunctionTimeSeries:InvalidData', ...
+                    'Input must be a numeric array or function handle.');
+            end
+
+            if isa(obj.grid,'ReceiverSpace1D')
+                coordinates = {obj.grid.points};
+            elseif isa(obj.grid,'ReceiverSpace2D')
+                coordinates = {obj.grid.points(:,1),obj.grid.points(:,2)};
+            elseif obj.dim == 1
+                coordinates = {obj.grid.x.pts};
+            else
+                [X,Y] = obj.grid.mesh();
+                coordinates = {X,Y};
+            end
+
+            % Stage snapshots so a failed evaluation leaves obj unchanged.
+            staged = GridFunctionTimeSeries(obj.grid,obj.times);
+            for k = 1:obj.Nt
+                snapshotData = data(coordinates{:},obj.times(k));
+                if ~isnumeric(snapshotData)
+                    error('GridFunctionTimeSeries:InvalidData', ...
+                        'The function must return a numeric snapshot.');
+                end
+                staged.setSnapshot(k,snapshotData);
+            end
+            obj.values = staged.values;
+        end
+
+        %%%%%%%%
         function setSnapshot(obj,timeIndex,data)
             % Store data at one output time.
             % Numeric data must match the spatial grid. A GridFunction is
