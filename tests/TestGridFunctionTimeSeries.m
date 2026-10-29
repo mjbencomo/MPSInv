@@ -31,7 +31,7 @@ classdef TestGridFunctionTimeSeries < matlab.unittest.TestCase
             testCase.verifyEqual(U.N,5);
             testCase.verifyEqual(U.Nt,3);
             testCase.verifyEqual(U.dim,1);
-            testCase.verifyEqual(U.times,testCase.Times);
+            testCase.verifyEqual(U.timePoints,testCase.Times);
             testCase.verifyEqual(U.label,"Value");
             testCase.verifyEqual(U.units,"");
             testCase.verifyEqual(U.timeLabel,"Time");
@@ -64,8 +64,8 @@ classdef TestGridFunctionTimeSeries < matlab.unittest.TestCase
         function constructorConvertsTimesToRow(testCase)
             U = GridFunctionTimeSeries(testCase.Grid1D,[0;0.5;1]);
 
-            testCase.verifyEqual(U.times,[0,0.5,1]);
-            testCase.verifySize(U.times,[1,3]);
+            testCase.verifyEqual(U.timePoints,[0,0.5,1]);
+            testCase.verifySize(U.timePoints,[1,3]);
         end
 
         function setNumericSnapshot1D(testCase)

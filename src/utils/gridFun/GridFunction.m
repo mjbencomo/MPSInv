@@ -52,6 +52,63 @@ classdef GridFunction < handle
         end
 
         %%%%%%%%
+        function result = norm(obj,p,options)
+            % Discrete or quadrature-weighted norms of sampled field values.
+            %
+            % norm(u,2)                       % numeric global norm
+            % norm(U,2,Over="space")          % time series on singleton grid
+            % norm(U,2,Over="time")           % spatial GridFunction
+            % norm(U,Inf,Dimension=1)         % reduce spatial axis 1
+            % norm(U,2,Over="all",Weighted=true)
+            %
+            % p is 1, 2 or Inf. Dimension selects storage axes, including
+            % the time axis, and is exclusive with an explicit Over option.
+            % Receiver storage axes are receiver index (1) and time (2).
+            % Weights supplies quadrature weights over the reduced axes:
+            % a vector for one axis, a tensor for several axes, or a cell
+            % of vectors in ascending axis order. Explicit weights imply
+            % Weighted=true. See GridFieldNorm and README_norms.txt.
+
+            arguments
+                obj (1,1) GridFunction
+                p (1,1) double = 2
+                options.Over (1,1) string = ""
+                options.Dimension double = []
+                options.Weighted (1,1) logical = false
+                options.Weights = []
+                options.MeasureUnits (1,1) string = ""
+            end
+
+            result = GridFieldNorm.compute(obj,p,options);
+        end
+
+        %%%%%%%%
+        function copyMetadataFrom(obj,source)
+            % Copy descriptive metadata from a field or time series.
+            %
+            %   target.copyMetadataFrom(source)
+            %
+            % Copies label and units without checking spatial grids.
+            % Grid, values and stored time points remain unchanged.
+            % Copying units relabels data; no unit conversion is performed.
+
+            arguments
+                obj (1,1) GridFunction
+                source
+            end
+
+            if ~isscalar(source) || ...
+                    ~(isa(source,'GridFunction') || ...
+                      isa(source,'GridFunctionTimeSeries'))
+                error('GridFunction:InvalidMetadataSource', ...
+                    'Source must be a scalar GridFunction or GridFunctionTimeSeries.');
+            end
+
+            obj.label = source.label;
+            obj.units = source.units;
+        end
+
+        %%%%%%%%
         function setValues(obj,data)
             % Set grid-function values using an array or function handle.
 
@@ -218,7 +275,37 @@ classdef GridFunction < handle
 
     end
 
-    %%
+    %% Arithmetic methods
+    % Arithmetic returns independent objects. Binary field operands must
+    % have the same class, grid and (for series) stored times. Numeric
+    % operands must be scalars; use .* and ./ for pointwise operations.
+    methods
+        function result = plus(a,b)
+            result = GridFieldArithmetic.binary(a,b,"plus");
+        end
+
+        function result = minus(a,b)
+            result = GridFieldArithmetic.binary(a,b,"minus");
+        end
+
+        function result = times(a,b)
+            result = GridFieldArithmetic.binary(a,b,"times");
+        end
+
+        function result = rdivide(a,b)
+            result = GridFieldArithmetic.binary(a,b,"rdivide");
+        end
+
+        function result = mtimes(a,b)
+            result = GridFieldArithmetic.binary(a,b,"mtimes");
+        end
+
+        function result = uminus(a)
+            result = GridFieldArithmetic.binary(-1,a,"mtimes");
+        end
+    end
+
+    %% Private methods
     methods (Access = private)
 
         %%%%%%%%

@@ -2,10 +2,11 @@ classdef GridFunctionTimeSeries < handle
     % GridFunctionTimeSeries stores spatial grid functions at specified times.
     % Values are defined on a fixed spatial grid and a numeric array of
     % output times, which may differ from the computational solver grids.
+    % Stored times are exposed as timePoints; times is reserved for .*.
 
     properties (SetAccess = protected)
         grid
-        times
+        timePoints
         values
     end
 
@@ -56,7 +57,7 @@ classdef GridFunctionTimeSeries < handle
             end
 
             obj.grid = grid;
-            obj.times = times;
+            obj.timePoints = times;
             obj.label = options.Label;
             obj.units = options.Units;
             obj.timeLabel = options.TimeLabel;
@@ -75,6 +76,130 @@ classdef GridFunctionTimeSeries < handle
                 error('GridFunctionTimeSeries:InvalidDimension', ...
                     'Only 1D and 2D spatial grids are supported.');
             end
+        end
+
+        %%%%%%%%
+        function result = norm(obj,p,options)
+            % Discrete or quadrature-weighted norms of sampled field values.
+            %
+            % norm(u,2)                       % numeric global norm
+            % norm(U,2,Over="space")          % time series on singleton grid
+            % norm(U,2,Over="time")           % spatial GridFunction
+            % norm(U,Inf,Dimension=1)         % reduce spatial axis 1
+            % norm(U,2,Over="all",Weighted=true)
+            %
+            % p is 1, 2 or Inf. Dimension selects storage axes, including
+            % the time axis, and is exclusive with an explicit Over option.
+            % Receiver storage axes are receiver index (1) and time (2).
+            % Weights supplies quadrature weights over the reduced axes:
+            % a vector for one axis, a tensor for several axes, or a cell
+            % of vectors in ascending axis order. Explicit weights imply
+            % Weighted=true. See GridFieldNorm and README_norms.txt.
+
+            arguments
+                obj (1,1) GridFunctionTimeSeries
+                p (1,1) double = 2
+                options.Over (1,1) string = ""
+                options.Dimension double = []
+                options.Weighted (1,1) logical = false
+                options.Weights = []
+                options.MeasureUnits (1,1) string = ""
+            end
+
+            result = GridFieldNorm.compute(obj,p,options);
+        end
+
+        %%%%%%%%
+        function copyMetadataFrom(obj,source)
+            % Copy descriptive metadata from a field or time series.
+            %
+            %   target.copyMetadataFrom(source)
+            %
+            % Copies label and units without checking spatial grids.
+            % Time labels and units are copied only from a time series;
+            % a GridFunction source leaves the target time metadata intact.
+            % Grid, values and stored time points remain unchanged.
+            % Copying units relabels data; no unit conversion is performed.
+
+            arguments
+                obj (1,1) GridFunctionTimeSeries
+                source
+            end
+
+            if ~isscalar(source) || ...
+                    ~(isa(source,'GridFunction') || ...
+                      isa(source,'GridFunctionTimeSeries'))
+                error('GridFunctionTimeSeries:InvalidMetadataSource', ...
+                    'Source must be a scalar GridFunction or GridFunctionTimeSeries.');
+            end
+
+            obj.label = source.label;
+            obj.units = source.units;
+            if isa(source,'GridFunctionTimeSeries')
+                obj.timeLabel = source.timeLabel;
+                obj.timeUnits = source.timeUnits;
+            end
+        end
+
+        %%%%%%%%
+        function setValues(obj,data)
+            % Set values at every spatial point and stored output time.
+            %
+            %   U.setValues(data)
+            %   U.setValues(@(x,t) f(x,t))
+            %   U.setValues(@(x,y,t) f(x,y,t))
+            %
+            % Numeric arrays must have size [Nx,Nt] for 1D grids,
+            % [Nx,Ny,Nt] for 2D grids, or [numPts,Nt] for receiver spaces.
+            % Singleton dimensions must retain their positions; MATLAB
+            % automatically omits trailing singleton dimensions.
+            %
+            % Functions receive all spatial coordinates and one scalar time
+            % per call. Use elementwise operations on the coordinates and
+            % return one numeric snapshot matching setSnapshot's rules.
+            % Receiver coordinates follow their stored receiver order.
+            % Values are replaced only after every snapshot is validated.
+
+            arguments
+                obj
+                data
+            end
+
+            if isnumeric(data)
+                if ~isequal(size(data),size(obj.values))
+                    error('GridFunctionTimeSeries:InvalidSize', ...
+                        ['Array size must match the spatial grid and ' ...
+                         'number of stored times.']);
+                end
+                obj.values = data;
+                return;
+            elseif ~isa(data,'function_handle')
+                error('GridFunctionTimeSeries:InvalidData', ...
+                    'Input must be a numeric array or function handle.');
+            end
+
+            if isa(obj.grid,'ReceiverSpace1D')
+                coordinates = {obj.grid.points};
+            elseif isa(obj.grid,'ReceiverSpace2D')
+                coordinates = {obj.grid.points(:,1),obj.grid.points(:,2)};
+            elseif obj.dim == 1
+                coordinates = {obj.grid.x.pts};
+            else
+                [X,Y] = obj.grid.mesh();
+                coordinates = {X,Y};
+            end
+
+            % Stage snapshots so a failed evaluation leaves obj unchanged.
+            staged = GridFunctionTimeSeries(obj.grid,obj.timePoints);
+            for k = 1:obj.Nt
+                snapshotData = data(coordinates{:},obj.timePoints(k));
+                if ~isnumeric(snapshotData)
+                    error('GridFunctionTimeSeries:InvalidData', ...
+                        'The function must return a numeric snapshot.');
+                end
+                staged.setSnapshot(k,snapshotData);
+            end
+            obj.values = staged.values;
         end
 
         %%%%%%%%
@@ -443,11 +568,11 @@ classdef GridFunctionTimeSeries < handle
             if isa(obj.grid,'ReceiverSpace1D') || ...
                     isa(obj.grid,'ReceiverSpace2D')
                 if obj.numPts == 1
-                    h = plot(ax,obj.times,obj.values(1,:));
+                    h = plot(ax,obj.timePoints,obj.values(1,:));
                     xlabel(ax,obj.timeLabel+" ("+obj.timeUnits+")");
                     ylabel(ax,obj.formattedLabel());
                 else
-                    h = imagesc(ax,1:obj.numPts,obj.times,obj.values.');
+                    h = imagesc(ax,1:obj.numPts,obj.timePoints,obj.values.');
                     xlabel(ax,"Receiver Index");
                     ylabel(ax,obj.timeLabel+" ("+obj.timeUnits+")");
                     cb = colorbar(ax);
@@ -458,13 +583,13 @@ classdef GridFunctionTimeSeries < handle
 
             elseif obj.dim == 1
                 if obj.N == 1
-                    h = plot(ax,obj.times,obj.values(1,:));
+                    h = plot(ax,obj.timePoints,obj.values(1,:));
                     xlabel(ax,obj.timeLabel+" ("+obj.timeUnits+")");
                     ylabel(obj.formattedLabel());
                 else
                     h = imagesc(ax, ...
                         1:obj.N, ...
-                        obj.times, ...
+                        obj.timePoints, ...
                         obj.values.');
                     xlabel(ax,"Receiver Index");
                     ylabel(ax,obj.timeLabel+" ("+obj.timeUnits+")");
@@ -478,13 +603,13 @@ classdef GridFunctionTimeSeries < handle
                 % In 2D receivers are numbered first by x, then by y
                 % coordinate.
                 if obj.N == 1
-                    h = plot(ax,obj.times,obj.values(:));
+                    h = plot(ax,obj.timePoints,obj.values(:));
                     xlabel(ax,obj.timeLabel+" ("+obj.timeUnits+")");
                     ylabel(obj.formattedLabel());
                 else 
                    Nxy = prod(obj.N);
                    vals = reshape(obj.values,[Nxy,obj.Nt]);
-                   h = imagesc(1:Nxy,obj.times,vals.');
+                   h = imagesc(1:Nxy,obj.timePoints,vals.');
                    xlabel(ax,"Receiver Index");
                    ylabel(ax,obj.timeLabel+" ("+obj.timeUnits+")");
                    cb = colorbar(ax);
@@ -517,7 +642,7 @@ classdef GridFunctionTimeSeries < handle
 
             obj.validateTimeIndex(timeIndex);
             value = obj.timeLabel + " = " + ...
-                sprintf('%.6g',obj.times(timeIndex));
+                sprintf('%.6g',obj.timePoints(timeIndex));
 
             if strlength(obj.timeUnits) > 0
                 value = value + " " + obj.timeUnits;
@@ -540,12 +665,42 @@ classdef GridFunctionTimeSeries < handle
 
         %%%%%%%%
         function value = get.Nt(obj)
-            value = numel(obj.times);
+            value = numel(obj.timePoints);
         end
 
         %%%%%%%%
         function value = get.dim(obj)
             value = obj.grid.dim;
+        end
+    end
+
+    %% Arithmetic methods
+    % Arithmetic returns independent objects. Binary field operands must
+    % have the same class, grid and (for series) stored times. Numeric
+    % operands must be scalars; use .* and ./ for pointwise operations.
+    methods
+        function result = plus(a,b)
+            result = GridFieldArithmetic.binary(a,b,"plus");
+        end
+
+        function result = minus(a,b)
+            result = GridFieldArithmetic.binary(a,b,"minus");
+        end
+
+        function result = times(a,b)
+            result = GridFieldArithmetic.binary(a,b,"times");
+        end
+
+        function result = rdivide(a,b)
+            result = GridFieldArithmetic.binary(a,b,"rdivide");
+        end
+
+        function result = mtimes(a,b)
+            result = GridFieldArithmetic.binary(a,b,"mtimes");
+        end
+
+        function result = uminus(a)
+            result = GridFieldArithmetic.binary(-1,a,"mtimes");
         end
     end
 
