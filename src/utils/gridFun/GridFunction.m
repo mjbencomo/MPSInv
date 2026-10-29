@@ -218,7 +218,37 @@ classdef GridFunction < handle
 
     end
 
-    %%
+    %% Arithmetic methods
+    % Arithmetic returns independent objects. Binary field operands must
+    % have the same class, grid and (for series) stored times. Numeric
+    % operands must be scalars; use .* and ./ for pointwise operations.
+    methods
+        function result = plus(a,b)
+            result = GridFieldArithmetic.binary(a,b,"plus");
+        end
+
+        function result = minus(a,b)
+            result = GridFieldArithmetic.binary(a,b,"minus");
+        end
+
+        function result = times(a,b)
+            result = GridFieldArithmetic.binary(a,b,"times");
+        end
+
+        function result = rdivide(a,b)
+            result = GridFieldArithmetic.binary(a,b,"rdivide");
+        end
+
+        function result = mtimes(a,b)
+            result = GridFieldArithmetic.binary(a,b,"mtimes");
+        end
+
+        function result = uminus(a)
+            result = GridFieldArithmetic.binary(-1,a,"mtimes");
+        end
+    end
+
+    %% Private methods
     methods (Access = private)
 
         %%%%%%%%

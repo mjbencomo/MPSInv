@@ -36,7 +36,7 @@ classdef TestGridFunctionTimeSeriesSetValues < matlab.unittest.TestCase
                     U.setValues(zeros(size(expected)));
                     U.setValues(expected);
                     testCase.verifyEqual(U.values,expected);
-                    testCase.verifyEqual(U.times,times);
+                    testCase.verifyEqual(U.timePoints,times);
                     testCase.verifyEqual(U.label,"Pressure");
                     testCase.verifyEqual(U.units,"Pa");
                     testCase.verifyEqual(U.timeUnits,"s");
