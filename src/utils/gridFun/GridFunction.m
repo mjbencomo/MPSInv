@@ -52,6 +52,37 @@ classdef GridFunction < handle
         end
 
         %%%%%%%%
+        function result = norm(obj,p,options)
+            % Discrete or quadrature-weighted norms of sampled field values.
+            %
+            % norm(u,2)                       % numeric global norm
+            % norm(U,2,Over="space")          % time series on singleton grid
+            % norm(U,2,Over="time")           % spatial GridFunction
+            % norm(U,Inf,Dimension=1)         % reduce spatial axis 1
+            % norm(U,2,Over="all",Weighted=true)
+            %
+            % p is 1, 2 or Inf. Dimension selects storage axes, including
+            % the time axis, and is exclusive with an explicit Over option.
+            % Receiver storage axes are receiver index (1) and time (2).
+            % Weights supplies quadrature weights over the reduced axes:
+            % a vector for one axis, a tensor for several axes, or a cell
+            % of vectors in ascending axis order. Explicit weights imply
+            % Weighted=true. See GridFieldNorm and README_norms.txt.
+
+            arguments
+                obj (1,1) GridFunction
+                p (1,1) double = 2
+                options.Over (1,1) string = ""
+                options.Dimension double = []
+                options.Weighted (1,1) logical = false
+                options.Weights = []
+                options.MeasureUnits (1,1) string = ""
+            end
+
+            result = GridFieldNorm.compute(obj,p,options);
+        end
+
+        %%%%%%%%
         function copyMetadataFrom(obj,source)
             % Copy descriptive metadata from a field or time series.
             %
