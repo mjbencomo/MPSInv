@@ -52,6 +52,32 @@ classdef GridFunction < handle
         end
 
         %%%%%%%%
+        function copyMetadataFrom(obj,source)
+            % Copy descriptive metadata from a field or time series.
+            %
+            %   target.copyMetadataFrom(source)
+            %
+            % Copies label and units without checking spatial grids.
+            % Grid, values and stored time points remain unchanged.
+            % Copying units relabels data; no unit conversion is performed.
+
+            arguments
+                obj (1,1) GridFunction
+                source
+            end
+
+            if ~isscalar(source) || ...
+                    ~(isa(source,'GridFunction') || ...
+                      isa(source,'GridFunctionTimeSeries'))
+                error('GridFunction:InvalidMetadataSource', ...
+                    'Source must be a scalar GridFunction or GridFunctionTimeSeries.');
+            end
+
+            obj.label = source.label;
+            obj.units = source.units;
+        end
+
+        %%%%%%%%
         function setValues(obj,data)
             % Set grid-function values using an array or function handle.
 
