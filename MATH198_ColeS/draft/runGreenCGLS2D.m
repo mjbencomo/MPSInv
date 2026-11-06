@@ -94,7 +94,7 @@ arguments
         {mustBeNonnegative,mustBeFinite} = 0.01
     options.RandomSeed double = []
     options.MaxIterations (1,1) double ...
-        {mustBeInteger,mustBePositive} = 1000
+        {mustBeInteger,mustBePositive} = 5000
     options.RelativeTolerance (1,1) double ...
         {mustBeNonnegative,mustBeFinite} = 1e-6
     options.MakePlots (1,1) logical = false
@@ -161,8 +161,11 @@ source = mps.discretize( ...
 solver = AcousticSolver2D_PML( ...
     gridSp_P,t_cmp,gridSp_rcv,t_rcv,medium,pml, ...
     SpatialOrder=spatialOrder);
+
+
 [P,~,~] = solver.solve(p0,vx0,vy0,Source=source);
 data_nf = reshape(P.values.',[],1);
+
 
 % Add independent, zero-mean Gaussian noise using the stated 1%-of-peak
 % convention: noise = randn(size(data_nf))*norm(data_nf,inf)*fraction.

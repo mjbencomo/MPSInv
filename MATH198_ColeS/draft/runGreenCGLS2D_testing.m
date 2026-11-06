@@ -92,29 +92,31 @@ beta = 1;
 Experiment2c = runGreenCGLS2D(rcv_loc,src_loc,derivativeOrders,w, ...
 KappaValue=kappa, BetaValue=beta);
 plotGreenCGLS2D(Experiment2c);
-%% Experiment 3
-% Here we will adjust our bulk modulus so the speed of sound through the
-% medium is 1.5 km/s. Keep the Buoyancy at 1 cm^3/g. It follows that the
-% bulk modulus is 0.00225 Pa. We will be running this on with a monopole
-% source to simplify the experiment
-
-%Creating receiver grid
-x_rcv = linspace(0.25,0.75,10)';
-y_rcv = linspace(0.25,0.65,8)';
-
-rcv_loc = [
-    x_rcv, 0.25*ones(numel(x_rcv),1);
-    x_rcv, 0.65*ones(numel(x_rcv),1);
-    0.25*ones(numel(y_rcv)-2,1), y_rcv(2:end-1);
-    0.75*ones(numel(y_rcv)-2,1), y_rcv(2:end-1)];
-src_location0 = [0.5,0.45];
-src_loc = [src_location0];
-derivativeOrders = [0,0];
-tc0 = 0.35;
-w = {@(t) exp(-((t-tc0)/0.1).^2)};
-kappa = 0.00225;
-beta = 1;
-
-Experiment3 = runGreenCGLS2D(rcv_loc,src_loc,derivativeOrders,w, ...
-    KappaValue=kappa, BetaValue=beta);
-plotGreenCGLS2D(Experiment3);
+% %% Experiment 3
+% % Here we will adjust our bulk modulus so the speed of sound through the
+% % medium is 1.5 km/s. Keep the Buoyancy at 1 cm^3/g. It follows that the
+% % bulk modulus is 0.00225 Pa. We will be running this on with a monopole
+% % source to simplify the experiment
+% 
+% %Creating receiver grid
+% x_rcv = linspace(0.25,0.75,10)';
+% y_rcv = linspace(0.25,0.65,8)';
+% 
+% rcv_loc = [
+%     x_rcv, 0.25*ones(numel(x_rcv),1);
+%     x_rcv, 0.65*ones(numel(x_rcv),1);
+%     0.25*ones(numel(y_rcv)-2,1), y_rcv(2:end-1);
+%     0.75*ones(numel(y_rcv)-2,1), y_rcv(2:end-1)];
+% src_location0 = [0.5,0.45];
+% src_loc = [src_location0];
+% derivativeOrders = [0,0];
+% tc0 = 0.35;
+% w = {@(t) exp(-((t-tc0)/0.1).^2)};
+% kappa = 2250;
+% beta = 1000;
+% domainX = 1000;
+% domainY = 1000;
+% 
+% Experiment3 = runGreenCGLS2D(rcv_loc,src_loc,derivativeOrders,w, ...
+%     KappaValue=kappa, BetaValue=beta, DomainX=domainX, DomainY=domainY);
+% plotGreenCGLS2D(Experiment3);
