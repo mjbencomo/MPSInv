@@ -172,15 +172,23 @@ end
 %% CGLS convergence histories
 info = results.cglsInfo;
 iterations = 0:info.iterations;
-dataResidual = info.dataResidualHistory(:) / norm(results.noisyData,2);
+dataScale = norm(results.noisyData,2);
+dataResidual = info.dataResidualHistory(:) / dataScale;
+noiseLimit = results.noiseNorm / dataScale;
 normalResidual = info.normalResidualHistory(:);
 trueError = info.trueErrorHistory(:);
 historyLength = min([numel(iterations),numel(dataResidual), ...
     numel(normalResidual),numel(trueError)]);
 iterations = iterations(1:historyLength);
 
+
 figure('Name','CGLS Relative Pressure Residual')
 semilogy(iterations,dataResidual(1:historyLength))
+hold on
+if noiseLimit > 0
+    yline(noiseLimit,'r--')
+end
+hold off
 xlabel('Iterations')
 ylabel('Relative Pressure Residual')
 title('Convergence of CGLS')
