@@ -45,10 +45,11 @@ function results = runGreenCGLS2D( ...
 %                           use noise-free data.
 %       RandomSeed          Optional nonnegative integer seed. When
 %                           provided, a local random stream is used.
-%       MaxIterations       CGLS iteration limit (default 1000).
+%       MaxIterations       CGLS iteration limit (default=size of A).
 %       RelativeTolerance   CGLS relative normal-residual tolerance
 %                           (default 1e-6).
-%       MakePlots           Make diagnostic plots (default false).
+%       StopAtNoiseLevel    When enabled the solver stops when below the
+%                           noise level (default enabled).
 %
 %   RESULTS contains the direct and noisy data, Green kernels, forward
 %   operators, true and recovered source samples, receiver and source time
@@ -93,11 +94,10 @@ arguments
     options.Noise_Percent (1,1) double ...
         {mustBeNonnegative,mustBeFinite} = 0.01
     options.RandomSeed double = []
-    options.MaxIterations (1,1) double ...
-        {mustBeInteger,mustBePositive} = 5000
+    options.MaxIterations double = []
     options.RelativeTolerance (1,1) double ...
         {mustBeNonnegative,mustBeFinite} = 1e-6
-    options.MakePlots (1,1) logical = false
+    options.StopAtNoiseLevel (1,1) logical = true
 end
 
 validateExperimentInputs(receiverLocations,sourceLocations, ...
@@ -203,6 +203,15 @@ T_op_out = TimeInterpOp( ...
 A_G_op = G.makeLinearOp();
 A_op = CompositeLinearOp({T_op_out,A_G_op,T_op_in});
 
+% Setting Max Iterations:
+maxIterCap = max(A_op.dimDomain,A_op.dimRange);
+
+if isempty(options.MaxIterations)
+    maxIterations = maxIterCap;
+else
+    maxIterations = options.MaxIterations;
+end
+
 % Sample every input source function on the convolution source grid.
 W_src = zeros(numel(t_src),numberOfSources);
 for j = 1:numberOfSources
@@ -219,11 +228,18 @@ end
 w_data = W_src(:);
 w_initial = zeros(size(w_data));
 
+if options.StopAtNoiseLevel
+    noiseNormForStopping = norm(noise,2);
+else
+    noiseNormForStopping = 0;  % Zero disables the noise-level condition
+end
+
 [w_cgls,info_cgls] = solver_CGLS( ...
     A_op,data_noisy, ...
     InitialGuess=w_initial, ...
-    MaxIterations=options.MaxIterations, ...
+    MaxIterations=maxIterations, ...
     RelativeTolerance=options.RelativeTolerance, ...
+    NoiseNorm=noiseNormForStopping, ...
     TrueSolution=w_data);
 data_recovered = A_op.fwd(w_cgls);
 W_cgls = reshape(w_cgls,size(W_src));
@@ -265,11 +281,8 @@ results.relativeErrorAgainstNoisyData = safeRelativeNorm( ...
 results.relativeErrorAgainstNoiseFreeData = safeRelativeNorm( ...
     norm(data_recovered-data_nf,2),norm(data_nf,2));
 results.wSpeed = waveSpeed;
+results.maxIterations = maxIterations;
 
-if options.MakePlots
-    plotExperimentResults(t_rcv,data_nf,data_noisy,noise, ...
-        W_src,W_cgls,t_src,numberOfReceivers,numberOfSources);
-end
 end
 
 function validateExperimentInputs( ...
@@ -386,46 +399,5 @@ if denominator == 0
     value = NaN;
 else
     value = numerator/denominator;
-end
-end
-
-function plotExperimentResults( ...
-        t_rcv,data_nf,data_noisy,noise,W_src,W_cgls,t_src, ...
-        numberOfReceivers,numberOfSources)
-data_nf_by_receiver = reshape(data_nf,numel(t_rcv),numberOfReceivers);
-data_noisy_by_receiver = reshape( ...
-    data_noisy,numel(t_rcv),numberOfReceivers);
-noise_by_receiver = reshape(noise,numel(t_rcv),numberOfReceivers);
-
-figure
-for r = 1:numberOfReceivers
-    subplot(numberOfReceivers,2,2*r-1)
-    plot(t_rcv,data_nf_by_receiver(:,r));
-    hold on
-    plot(t_rcv,data_noisy_by_receiver(:,r));
-    hold off
-    legend('Noise-free data','Noisy data')
-    xlabel('Time')
-    ylabel('Pressure')
-    title(sprintf('Receiver %d data',r))
-
-    subplot(numberOfReceivers,2,2*r)
-    plot(t_rcv,noise_by_receiver(:,r));
-    xlabel('Time')
-    ylabel('Noise')
-    title(sprintf('Receiver %d added noise',r))
-end
-
-figure
-for j = 1:numberOfSources
-    subplot(numberOfSources,1,j)
-    plot(t_src,W_src(:,j));
-    hold on
-    plot(t_src,W_cgls(:,j));
-    hold off
-    legend('True source','CGLS estimate')
-    xlabel('Time')
-    ylabel('Source amplitude')
-    title(sprintf('Source component %d',j))
 end
 end
