@@ -81,6 +81,24 @@ plotAcqGeo(results.wSpeed,results.sourceLocations, ...
     results.receiverLocations,Parent=axGeo)
 title('Source-Receiver Locations')
 
+%% Pressure heatmap: time down the vertical axis, receiver index horizontally
+figure('Name','Direct Pressure Heatmap')
+imagesc(1:nReceivers,t_rcv,P_direct)
+set(gca,'YDir','reverse')
+xticks(1:nReceivers)
+xlabel('Receiver Index')
+ylabel('Time (s)')
+title('Pressure')
+cb = colorbar;
+cb.Label.String = 'Pressure (Pa)';
+nColors = 128;
+blueToWhite = [linspace(0,1,nColors)', ...
+    linspace(0,1,nColors)',ones(nColors,1)];
+whiteToRed = [ones(nColors,1), ...
+    linspace(1,0,nColors)',linspace(1,0,nColors)'];
+colormap([blueToWhite;whiteToRed])
+clim([-25 25])
+
 %% Noise-free direct pressure time series, one curve per receiver
 figure('Name','Direct Pressure Time Series')
 plot(t_rcv,P_direct,'LineWidth',1.2)
@@ -165,16 +183,10 @@ iterations = iterations(1:historyLength);
 
 
 figure('Name','CGLS Relative Pressure Residual')
-plottedResidual = dataResidual(1:historyLength);
 semilogy(iterations,dataResidual(1:historyLength))
 hold on
 if noiseLimit > 0
-    yline(noiseLimit,'r--','Noise level')
-    noiseHit = find(plottedResidual <= noiseLimit,1,'first');
-    if ~isempty(noiseHit)
-        plot(iterations(noiseHit),plottedResidual(noiseHit), ...
-            'rx','MarkerSize',16,'LineWidth',3)
-    end
+    yline(noiseLimit,'r--')
 end
 hold off
 xlabel('Iterations')
@@ -190,16 +202,7 @@ title('Convergence of CGLS')
 grid on
 
 figure('Name','CGLS True Source Error')
-plottedTrueError = trueError(1:historyLength);
-semilogy(iterations,plottedTrueError)
-hold on
-
-if ~isempty(noiseHit)
-    plot(iterations(noiseHit),plottedTrueError(noiseHit), ...
-        'rx','MarkerSize',16,'LineWidth',3)
-end
-
-hold off
+semilogy(iterations,trueError(1:historyLength))
 xlabel('Iterations')
 ylabel('True Error')
 title('Convergence of CGLS')
@@ -222,45 +225,6 @@ title('Receiver Pressure Error (Receiver Time Grid)')
 legend(receiverNames,'Location','best')
 grid on
 
-%% Pressure heatmaps: time down the vertical axis, receiver index horizontally
-pressureMax = max(abs([P_direct(:); P_recovered(:)]));
-pressureLimits = [-pressureMax pressureMax];
-
-figure('Name','Pressure Heatmaps')
-subplot(1,2,1)
-imagesc(1:nReceivers,t_rcv,P_direct)
-set(gca,'YDir','reverse')
-xticks(1:5:nReceivers)
-xlabel('Receiver Index')
-ylabel('Time (s)')
-title('Pressure')
-cb = colorbar;
-cb.Label.String = 'Pressure (Pa)';
-nColors = 128;
-blueToWhite = [linspace(0,1,nColors)', ...
-    linspace(0,1,nColors)',ones(nColors,1)];
-whiteToRed = [ones(nColors,1), ...
-    linspace(1,0,nColors)',linspace(1,0,nColors)'];
-colormap([blueToWhite;whiteToRed])
-clim([-pressureMax pressureMax])
-
-subplot(1,2,2)
-imagesc(1:nReceivers,t_rcv,P_recovered)
-set(gca,'YDir','reverse')
-xticks(1:5:nReceivers)
-xlabel('Receiver Index')
-ylabel('Time (s)')
-title('Recovered Pressure')
-cb = colorbar;
-cb.Label.String = 'Recovered Pressure (Pa)';
-nColors = 128;
-blueToWhite = [linspace(0,1,nColors)', ...
-    linspace(0,1,nColors)',ones(nColors,1)];
-whiteToRed = [ones(nColors,1), ...
-    linspace(1,0,nColors)',linspace(1,0,nColors)'];
-colormap([blueToWhite;whiteToRed])
-clim([-pressureMax pressureMax])
-
 %% Direct and CGLS-recovered pressure at each receiver
 figure('Name','Direct and Recovered Pressure')
 for r = 1:nReceivers
@@ -278,13 +242,13 @@ end
 end
 
 function name = multipoleName(order)
-    if isequal(order,[0,0])
-        name = 'Monopole';
-    elseif isequal(order,[1,0])
-        name = 'Dipole in X';
-    elseif isequal(order,[0,1])
-        name = 'Dipole in Y';
-    else
-        name = sprintf('Multipole [%d,%d]',order(1),order(2));
-    end
+if isequal(order,[0,0])
+    name = 'Monopole';
+elseif isequal(order,[1,0])
+    name = 'Dipole in X';
+elseif isequal(order,[0,1])
+    name = 'Dipole in Y';
+else
+    name = sprintf('Multipole [%d,%d]',order(1),order(2));
+end
 end

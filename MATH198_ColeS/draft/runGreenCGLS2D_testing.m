@@ -1,4 +1,4 @@
-clear all;clear;clc; 
+clear; clc;
 %% Experiment 1
 % This experiment is a control of sorts. Standard CGLS with noise. 3
 % receivers, 1 multipole source consisting of a monopole and 2 dipoles.
@@ -14,16 +14,6 @@ w = {@(t) exp(-((t-tc0)/0.1).^2), ...
 
 Experiment1 = runGreenCGLS2D(rcv_loc,src_loc,derivativeOrders,w);
 plotGreenCGLS2D(Experiment1);
-
-
-% Displaying Results
-info = Experiment1.cglsInfo;
-A_op = Experiment1.forwardOperator;
-
-fprintf('Size of A: %d x %d\n',A_op.dimRange,A_op.dimDomain)
-fprintf('Maximum iterations allowed: %d\n',Experiment1.maxIterations)
-fprintf('Iterations performed: %d\n',info.iterations)
-fprintf('Why did we stop? %s\n',info.message)
 
 %% Experiment 2a
 % Here we will change the grid of receivers into a rectangular 
@@ -51,15 +41,6 @@ Experiment2a = runGreenCGLS2D(rcv_loc,src_loc,derivativeOrders,w, ...
     KappaValue=kappa, BetaValue=beta);
 plotGreenCGLS2D(Experiment2a);
 
-% Displaying Results
-info = Experiment2a.cglsInfo;
-A_op = Experiment2a.forwardOperator;
-
-fprintf('Size of A: %d x %d\n',A_op.dimRange,A_op.dimDomain)
-fprintf('Maximum iterations allowed: %d\n',Experiment2a.maxIterations)
-fprintf('Iterations performed: %d\n',info.iterations)
-fprintf('Why did we stop? %s\n',info.message)
-
 %% Experiment 2b
 % This is the same experiment as 2a but with dipoles and no monopole.
 
@@ -85,15 +66,6 @@ Experiment2b = runGreenCGLS2D(rcv_loc,src_loc,derivativeOrders,w, ...
     KappaValue=kappa, BetaValue=beta);
 plotGreenCGLS2D(Experiment2b);
 
-% Displaying Results
-info = Experiment2b.cglsInfo;
-A_op = Experiment2b.forwardOperator;
-
-fprintf('Size of A: %d x %d\n',A_op.dimRange,A_op.dimDomain)
-fprintf('Maximum iterations allowed: %d\n',Experiment2b.maxIterations)
-fprintf('Iterations performed: %d\n',info.iterations)
-fprintf('Why did we stop? %s\n',info.message)
-
 %% Experiment 2c
 % This is the same experiment as 2a but a multipole consisting of a
 % monopole and a dipole.
@@ -110,7 +82,7 @@ x_rcv, 0.65*ones(numel(x_rcv),1);
 src_location0 = [0.5,0.45];
 src_loc = [src_location0; src_location0; src_location0];
 derivativeOrders = [0,0; 1,0; 0,1];
-tc0 = 0.35; tc1 = 0.35; tc2 = 0.35;
+tc0 = 0.35; tc1 = 0.35;
 w = {@(t) exp(-((t-tc0)/0.1).^2), ...
     @(t) exp(-((t-tc1)/0.1).^2), ...
     @(t) exp(-((t-tc2)/0.1).^2)};
@@ -120,16 +92,6 @@ beta = 1;
 Experiment2c = runGreenCGLS2D(rcv_loc,src_loc,derivativeOrders,w, ...
 KappaValue=kappa, BetaValue=beta);
 plotGreenCGLS2D(Experiment2c);
-
-% Displaying Results
-info = Experiment2c.cglsInfo;
-A_op = Experiment2c.forwardOperator;
-
-fprintf('Size of A: %d x %d\n',A_op.dimRange,A_op.dimDomain)
-fprintf('Maximum iterations allowed: %d\n',Experiment2c.maxIterations)
-fprintf('Iterations performed: %d\n',info.iterations)
-fprintf('Why did we stop? %s\n',info.message)
-
 % %% Experiment 3
 % % Here we will adjust our bulk modulus so the speed of sound through the
 % % medium is 1.5 km/s. Keep the Buoyancy at 1 cm^3/g. It follows that the
