@@ -19,6 +19,8 @@ function [x,info] = solver_CGLS(A,b,options)
 %                         The default is 0. Both tolerances may be zero.
 %       MaxIterations    Maximum number of CGLS iterations. The default is
 %                        A.dimDomain.
+%       NoiseNorm        Stops solver when the magnitude of error is less
+%                       than the added noise value.
 %
 %   [X,INFO] also returns convergence information in a structure with
 %   fields:
@@ -58,6 +60,8 @@ function [x,info] = solver_CGLS(A,b,options)
             {mustBeReal,mustBeFinite,mustBeNonnegative} = 0
         options.MaxIterations (1,1) double ...
             {mustBeInteger,mustBePositive} = A.dimDomain
+        options.NoiseNorm (1,1) double ...
+            {mustBeReal,mustBeFinite,mustBeNonnegative} = 0
     end
 
     if numel(b) ~= A.dimRange
@@ -114,6 +118,12 @@ function [x,info] = solver_CGLS(A,b,options)
             stoppingThreshold,trueErrHist);
         return
     end
+    if options.NoiseNorm > 0 && dataResHist(1) <= options.NoiseNorm
+        info = makeInfo(0,'Initial normal residual is at or below the noise norm.', ...
+            0,r,normalResidual,dataResHist(1),normalResHist(1), ...
+            stoppingThreshold,trueErrHist);
+        return
+    end
 
     flag = 1;
     message = 'Maximum number of iterations reached.';
@@ -153,6 +163,13 @@ function [x,info] = solver_CGLS(A,b,options)
         if normalResidual <= stoppingThreshold
             flag = 0;
             message = 'Normal residual satisfies the relative/absolute tolerance.';
+            break
+        end
+
+        dataResidualNorm = dataResHist(k + 1);
+        if options.NoiseNorm > 0 && dataResidualNorm <= options.NoiseNorm
+            flag = 0;
+            message = 'Data residual is at or below the noise norm.';
             break
         end
 
