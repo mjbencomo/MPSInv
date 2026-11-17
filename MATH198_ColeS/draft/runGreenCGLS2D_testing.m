@@ -12,7 +12,7 @@ w = {@(t) exp(-((t-tc0)/0.1).^2), ...
     @(t) exp(-((t-tc1)/0.1).^2), ...
     @(t) exp(-((t-tc2)/0.1).^2)};
 
-Experiment1 = runGreenCGLS2D(rcv_loc,src_loc,derivativeOrders,w,RelativeTolerance=1e-5);
+Experiment1 = runGreenCGLS2D(rcv_loc,src_loc,derivativeOrders,w);
 plotGreenCGLS2D(Experiment1);
 
 

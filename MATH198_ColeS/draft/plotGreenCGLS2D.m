@@ -165,10 +165,16 @@ iterations = iterations(1:historyLength);
 
 
 figure('Name','CGLS Relative Pressure Residual')
+plottedResidual = dataResidual(1:historyLength);
 semilogy(iterations,dataResidual(1:historyLength))
 hold on
 if noiseLimit > 0
-    yline(noiseLimit,'r--')
+    yline(noiseLimit,'r--','Noise level')
+    noiseHit = find(plottedResidual <= noiseLimit,1,'first');
+    if ~isempty(noiseHit)
+        plot(iterations(noiseHit),plottedResidual(noiseHit), ...
+            'rx','MarkerSize',16,'LineWidth',3)
+    end
 end
 hold off
 xlabel('Iterations')
@@ -184,7 +190,16 @@ title('Convergence of CGLS')
 grid on
 
 figure('Name','CGLS True Source Error')
-semilogy(iterations,trueError(1:historyLength))
+plottedTrueError = trueError(1:historyLength);
+semilogy(iterations,plottedTrueError)
+hold on
+
+if ~isempty(noiseHit)
+    plot(iterations(noiseHit),plottedTrueError(noiseHit), ...
+        'rx','MarkerSize',16,'LineWidth',3)
+end
+
+hold off
 xlabel('Iterations')
 ylabel('True Error')
 title('Convergence of CGLS')
