@@ -40,7 +40,7 @@ derivativeOrders = [0,0];
 tc0 = 0.35;
 w = {@(t) exp(-((t-tc0)/0.1).^2)};
 
-Experiment2 = runGreenCGLS2D(rcv_loc,src_loc,derivativeOrders,w,StopAtNoiseLevel=false);
+Experiment2 = runGreenCGLS2D(rcv_loc,src_loc,derivativeOrders,w,StopAtNoiseLevel=true);
 plotGreenCGLS2D(Experiment2);
 
 %% Dipole Source
@@ -60,7 +60,7 @@ tc1 = 0.35; tc2 = 0.35;
 w = {@(t) exp(-((t-tc1)/0.1).^2), ...
     @(t) exp(-((t-tc2)/0.1).^2)};
 
-Experiment3 = runGreenCGLS2D(rcv_loc,src_loc,derivativeOrders,w,StopAtNoiseLevel=false);
+Experiment3 = runGreenCGLS2D(rcv_loc,src_loc,derivativeOrders,w,StopAtNoiseLevel=true);
 plotGreenCGLS2D(Experiment3);
 
 %% Multipole Source
@@ -82,5 +82,5 @@ w = {@(t) exp(-((t-tc0)/0.1).^2), ...
     @(t) exp(-((t-tc1)/0.1).^2), ...
     @(t) exp(-((t-tc2)/0.1).^2)};
 
-Experiment4 = runGreenCGLS2D(rcv_loc,src_loc,derivativeOrders,w,StopAtNoiseLevel=false);
+Experiment4 = runGreenCGLS2D(rcv_loc,src_loc,derivativeOrders,w,StopAtNoiseLevel=true);
 plotGreenCGLS2D(Experiment4);
