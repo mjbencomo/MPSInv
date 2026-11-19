@@ -74,12 +74,16 @@ title('Source Time Functions')
 legend(sourceNames,'Location','best')
 grid on
 
+formatFigureForSlides(gcf)
+
 %% Acquisition geometry
 figGeo = figure('Name','Source-Receiver Locations');
 axGeo = axes(figGeo);
 plotAcqGeo(results.wSpeed,results.sourceLocations, ...
     results.receiverLocations,Parent=axGeo)
 title('Source-Receiver Locations')
+
+formatFigureForSlides(figGeo)
 
 %% Noise-free direct pressure time series, one curve per receiver
 figure('Name','Direct Pressure Time Series')
@@ -89,6 +93,8 @@ ylabel('Pressure')
 title('Noise-Free Pressure at Each Receiver')
 legend(receiverNames,'Location','best')
 grid on
+
+formatFigureForSlides(gcf)
 
 %% Green functions, showing every receiver for each source component
 figure('Name','Pressure Green Functions')
@@ -105,6 +111,8 @@ for m = 1:nSources
     legend(receiverNames,'Location','best')
     grid on
 end
+
+formatFigureForSlides(gcf)
 
 %% Green operator matrix, separated into one block per source
 A_G = results.greenOperator.matrixRep();
@@ -125,6 +133,8 @@ for m = 1:nSources
     title(sprintf('A_{%d}',m-1))
 end
 
+formatFigureForSlides(gcf)
+
 %% True and recovered source signals
 figure('Name','Source Recovery')
 for m = 1:nSources
@@ -140,6 +150,8 @@ for m = 1:nSources
     grid on
 end
 
+formatFigureForSlides(gcf)
+
 %% Source reconstruction errors
 figure('Name','Source Errors')
 for m = 1:nSources
@@ -150,6 +162,8 @@ for m = 1:nSources
     title(['Source Error: ',sourceNames{m}])
     grid on
 end
+
+formatFigureForSlides(gcf)
 
 %% CGLS convergence histories
 info = results.cglsInfo;
@@ -168,6 +182,7 @@ figure('Name','CGLS Relative Pressure Residual')
 plottedResidual = dataResidual(1:historyLength);
 semilogy(iterations,dataResidual(1:historyLength))
 hold on
+noiseHit = [];
 if noiseLimit > 0
     yline(noiseLimit,'r--','Noise level')
     noiseHit = find(plottedResidual <= noiseLimit,1,'first');
@@ -182,12 +197,19 @@ ylabel('Relative Pressure Residual')
 title('Convergence of CGLS')
 grid on
 
+formatFigureForSlides(gcf)
+
+
+
 figure('Name','CGLS Normal Residual')
 semilogy(iterations,normalResidual(1:historyLength))
 xlabel('Iterations')
 ylabel('Normal Residual')
 title('Convergence of CGLS')
 grid on
+
+formatFigureForSlides(gcf)
+
 
 figure('Name','CGLS True Source Error')
 plottedTrueError = trueError(1:historyLength);
@@ -205,6 +227,8 @@ ylabel('True Error')
 title('Convergence of CGLS')
 grid on
 
+formatFigureForSlides(gcf)
+
 %% Normalized pressure fit error at the receiver times
 pressureScale = max(abs(results.noisyData));
 if pressureScale == 0
@@ -221,6 +245,8 @@ ylabel('Normalized pressure error')
 title('Receiver Pressure Error (Receiver Time Grid)')
 legend(receiverNames,'Location','best')
 grid on
+
+formatFigureForSlides(gcf)
 
 %% Pressure heatmaps: time down the vertical axis, receiver index horizontally
 pressureMax = max(abs([P_direct(:); P_recovered(:)]));
@@ -261,6 +287,8 @@ whiteToRed = [ones(nColors,1), ...
 colormap([blueToWhite;whiteToRed])
 clim([-pressureMax pressureMax])
 
+formatFigureForSlides(gcf)
+
 %% Direct and CGLS-recovered pressure at each receiver
 figure('Name','Direct and Recovered Pressure')
 for r = 1:nReceivers
@@ -275,6 +303,9 @@ for r = 1:nReceivers
     title(sprintf('Pressure at Receiver %d',r))
     grid on
 end
+
+formatFigureForSlides(gcf)
+
 end
 
 function name = multipoleName(order)
