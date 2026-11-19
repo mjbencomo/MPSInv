@@ -53,6 +53,7 @@ for m = 1:nSources
 end
 receiverNames = arrayfun(@(r) sprintf('Receiver %d',r),1:nReceivers, ...
     'UniformOutput',false);
+textSize = 16;
 
 %% Source time functions on the receiver time grid
 W_rcv = zeros(numel(t_rcv),nSources);
@@ -72,6 +73,7 @@ xlabel('Time')
 ylabel('Source amplitude')
 title('Source Time Functions')
 legend(sourceNames,'Location','best')
+fontsize(textSize, "points")
 grid on
 
 %% Acquisition geometry
@@ -79,25 +81,8 @@ figGeo = figure('Name','Source-Receiver Locations');
 axGeo = axes(figGeo);
 plotAcqGeo(results.wSpeed,results.sourceLocations, ...
     results.receiverLocations,Parent=axGeo)
+fontsize(textSize, "points")
 title('Source-Receiver Locations')
-
-%% Pressure heatmap: time down the vertical axis, receiver index horizontally
-figure('Name','Direct Pressure Heatmap')
-imagesc(1:nReceivers,t_rcv,P_direct)
-set(gca,'YDir','reverse')
-xticks(1:nReceivers)
-xlabel('Receiver Index')
-ylabel('Time (s)')
-title('Pressure')
-cb = colorbar;
-cb.Label.String = 'Pressure (Pa)';
-nColors = 128;
-blueToWhite = [linspace(0,1,nColors)', ...
-    linspace(0,1,nColors)',ones(nColors,1)];
-whiteToRed = [ones(nColors,1), ...
-    linspace(1,0,nColors)',linspace(1,0,nColors)'];
-colormap([blueToWhite;whiteToRed])
-clim([-25 25])
 
 %% Noise-free direct pressure time series, one curve per receiver
 figure('Name','Direct Pressure Time Series')
@@ -106,6 +91,7 @@ xlabel('Time')
 ylabel('Pressure')
 title('Noise-Free Pressure at Each Receiver')
 legend(receiverNames,'Location','best')
+fontsize(textSize, "points")
 grid on
 
 %% Green functions, showing every receiver for each source component
@@ -121,6 +107,7 @@ for m = 1:nSources
     ylabel('Pressure')
     title(['Pressure Green''s Function: ',sourceNames{m}])
     legend(receiverNames,'Location','best')
+    fontsize(textSize, "points")
     grid on
 end
 
@@ -141,6 +128,7 @@ for m = 1:nSources
     xlabel('Source-time index')
     ylabel('Data index')
     title(sprintf('A_{%d}',m-1))
+    fontsize(textSize, "points")
 end
 
 %% True and recovered source signals
@@ -155,6 +143,7 @@ for m = 1:nSources
     xlabel('Time')
     ylabel('Source')
     title(['Source Recovery Comparison: ',sourceNames{m}])
+    fontsize(textSize, "points")
     grid on
 end
 
@@ -166,6 +155,7 @@ for m = 1:nSources
     xlabel('Time')
     ylabel('Source error')
     title(['Source Error: ',sourceNames{m}])
+    fontsize(textSize, "points")
     grid on
 end
 
@@ -183,29 +173,50 @@ iterations = iterations(1:historyLength);
 
 
 figure('Name','CGLS Relative Pressure Residual')
+plottedResidual = dataResidual(1:historyLength);
 semilogy(iterations,dataResidual(1:historyLength))
 hold on
+noiseHit = [];
 if noiseLimit > 0
-    yline(noiseLimit,'r--')
+    yline(noiseLimit,'r--','Noise level')
+    noiseHit = find(plottedResidual <= noiseLimit,1,'first');
+    if ~isempty(noiseHit)
+        plot(iterations(noiseHit),plottedResidual(noiseHit), ...
+            'rx','MarkerSize',16,'LineWidth',3)
+    end
 end
 hold off
 xlabel('Iterations')
 ylabel('Relative Pressure Residual')
 title('Convergence of CGLS')
+fontsize(textSize, "points")
 grid on
+
 
 figure('Name','CGLS Normal Residual')
 semilogy(iterations,normalResidual(1:historyLength))
 xlabel('Iterations')
 ylabel('Normal Residual')
 title('Convergence of CGLS')
+fontsize(textSize, "points")
 grid on
 
+
 figure('Name','CGLS True Source Error')
-semilogy(iterations,trueError(1:historyLength))
+plottedTrueError = trueError(1:historyLength);
+semilogy(iterations,plottedTrueError)
+hold on
+
+if ~isempty(noiseHit)
+    plot(iterations(noiseHit),plottedTrueError(noiseHit), ...
+        'rx','MarkerSize',16,'LineWidth',3)
+end
+
+hold off
 xlabel('Iterations')
 ylabel('True Error')
 title('Convergence of CGLS')
+fontsize(textSize, "points")
 grid on
 
 %% Normalized pressure fit error at the receiver times
@@ -223,7 +234,49 @@ xlabel('Time')
 ylabel('Normalized pressure error')
 title('Receiver Pressure Error (Receiver Time Grid)')
 legend(receiverNames,'Location','best')
+fontsize(textSize, "points")
 grid on
+
+%% Pressure heatmaps: time down the vertical axis, receiver index horizontally
+pressureMax = max(abs([P_direct(:); P_recovered(:)]));
+pressureLimits = [-pressureMax pressureMax];
+
+figure('Name','Pressure Heatmaps')
+subplot(1,2,1)
+imagesc(1:nReceivers,t_rcv,P_direct)
+set(gca,'YDir','reverse')
+xticks(1:5:nReceivers)
+xlabel('Receiver Index')
+ylabel('Time (s)')
+title('Given')
+cb = colorbar;
+% cb.Label.String = 'Pressure (Pa)';
+nColors = 128;
+blueToWhite = [linspace(0,1,nColors)', ...
+    linspace(0,1,nColors)',ones(nColors,1)];
+whiteToRed = [ones(nColors,1), ...
+    linspace(1,0,nColors)',linspace(1,0,nColors)'];
+colormap([blueToWhite;whiteToRed])
+clim([-pressureMax pressureMax])
+fontsize(textSize, "points")
+
+subplot(1,2,2)
+imagesc(1:nReceivers,t_rcv,P_recovered)
+set(gca,'YDir','reverse')
+xticks(1:5:nReceivers)
+xlabel('Receiver Index')
+% ylabel('Time (s)')
+title('Recovered')
+cb = colorbar;
+cb.Label.String = 'Pressure (Pa)';
+nColors = 128;
+blueToWhite = [linspace(0,1,nColors)', ...
+    linspace(0,1,nColors)',ones(nColors,1)];
+whiteToRed = [ones(nColors,1), ...
+    linspace(1,0,nColors)',linspace(1,0,nColors)'];
+colormap([blueToWhite;whiteToRed])
+clim([-pressureMax pressureMax])
+fontsize(textSize, "points")
 
 %% Direct and CGLS-recovered pressure at each receiver
 figure('Name','Direct and Recovered Pressure')
@@ -237,18 +290,20 @@ for r = 1:nReceivers
     xlabel('Time')
     ylabel('Pressure')
     title(sprintf('Pressure at Receiver %d',r))
+    fontsize(textSize, "points")
     grid on
 end
+
 end
 
 function name = multipoleName(order)
-if isequal(order,[0,0])
-    name = 'Monopole';
-elseif isequal(order,[1,0])
-    name = 'Dipole in X';
-elseif isequal(order,[0,1])
-    name = 'Dipole in Y';
-else
-    name = sprintf('Multipole [%d,%d]',order(1),order(2));
-end
+    if isequal(order,[0,0])
+        name = 'Monopole';
+    elseif isequal(order,[1,0])
+        name = 'Dipole in X';
+    elseif isequal(order,[0,1])
+        name = 'Dipole in Y';
+    else
+        name = sprintf('Multipole [%d,%d]',order(1),order(2));
+    end
 end
